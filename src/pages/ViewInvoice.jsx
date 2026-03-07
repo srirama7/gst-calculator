@@ -37,7 +37,9 @@ export default function ViewInvoice() {
 
   function handlePreview() {
     const pdfDoc = generateInvoicePDF(invoice, company);
-    pdfDoc.output('dataurlnewwindow');
+    const blob = pdfDoc.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
   }
 
   if (loading) return <div className="text-center py-10">Loading...</div>;

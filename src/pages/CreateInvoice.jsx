@@ -158,7 +158,9 @@ export default function CreateInvoice() {
       amountInWords: numberToWords(grandTotal)
     };
     const pdfDoc = generateInvoicePDF(data, company);
-    pdfDoc.output('dataurlnewwindow');
+    const blob = pdfDoc.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
   }
 
   const inputClass = "mt-1 block w-full rounded border-gray-300 border px-2 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500";
