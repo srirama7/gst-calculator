@@ -140,7 +140,8 @@ export default function CreateInvoice() {
     };
 
     try {
-      const docRef = await addDoc(collection(db, 'invoices'), data);
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Save timed out. Please check your Firebase Firestore database is created and rules allow writes.')), 10000));
+      const docRef = await Promise.race([addDoc(collection(db, 'invoices'), data), timeout]);
       toast.success('Invoice saved!');
       navigate(`/invoice/${docRef.id}`);
     } catch (e) {

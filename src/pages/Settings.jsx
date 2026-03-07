@@ -18,7 +18,8 @@ export default function Settings() {
 
   async function loadCompany() {
     try {
-      const snap = await getDoc(doc(db, 'companies', COMPANY_DOC));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out')), 8000));
+      const snap = await Promise.race([getDoc(doc(db, 'companies', COMPANY_DOC)), timeout]);
       if (snap.exists()) setCompany(snap.data());
     } catch (e) {
       toast.error('Failed to load company: ' + e.message);
@@ -29,7 +30,8 @@ export default function Settings() {
   async function handleSave(e) {
     e.preventDefault();
     try {
-      await setDoc(doc(db, 'companies', COMPANY_DOC), company);
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Save timed out. Check Firestore rules.')), 10000));
+      await Promise.race([setDoc(doc(db, 'companies', COMPANY_DOC), company), timeout]);
       toast.success('Company details saved!');
     } catch (e) {
       toast.error('Failed to save: ' + e.message);

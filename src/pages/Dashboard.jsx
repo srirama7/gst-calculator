@@ -13,8 +13,14 @@ export default function Dashboard() {
 
   async function loadInvoices() {
     try {
-      const q = query(collection(db, 'invoices'), orderBy('createdAt', 'desc'), limit(20));
-      const snap = await getDocs(q);
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Loading timed out. Check Firebase Firestore is created.')), 8000));
+      let snap;
+      try {
+        const q = query(collection(db, 'invoices'), orderBy('createdAt', 'desc'), limit(20));
+        snap = await Promise.race([getDocs(q), timeout]);
+      } catch {
+        snap = await Promise.race([getDocs(collection(db, 'invoices')), timeout]);
+      }
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setInvoices(list);
 
