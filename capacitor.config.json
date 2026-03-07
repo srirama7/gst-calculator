@@ -1,0 +1,8 @@
+{
+  "appId": "com.gstcalculator.app",
+  "appName": "GST Invoice Calculator",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
