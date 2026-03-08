@@ -42,56 +42,55 @@ export default function Settings() {
     setCompany(prev => ({ ...prev, [field]: value }));
   }
 
-  if (loading) return <div className="text-center py-10">Loading...</div>;
+  if (loading) return <div className="text-center py-10 text-gray-400">Loading...</div>;
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Company Settings</h1>
-      <form onSubmit={handleSave} className="bg-white rounded-lg shadow p-6 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <h1 className="text-3xl font-bold text-gradient mb-8">Company Settings</h1>
+      <form onSubmit={handleSave} className="glass-card p-8 space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Company Name</label>
+            <label className="label-dark">Company Name</label>
             <input type="text" value={company.name} onChange={e => update('name', e.target.value)}
-              className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+              className="input-dark" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Phone</label>
+            <label className="label-dark">Phone</label>
             <input type="text" value={company.phone} onChange={e => update('phone', e.target.value)}
-              className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 shadow-sm" />
+              className="input-dark" />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">Address</label>
+            <label className="label-dark">Address</label>
             <input type="text" value={company.address} onChange={e => update('address', e.target.value)}
-              className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 shadow-sm" />
+              className="input-dark" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">City</label>
+            <label className="label-dark">City</label>
             <input type="text" value={company.city} onChange={e => update('city', e.target.value)}
-              className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 shadow-sm" />
+              className="input-dark" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Pincode</label>
+            <label className="label-dark">Pincode</label>
             <input type="text" value={company.pincode} onChange={e => update('pincode', e.target.value)}
-              className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 shadow-sm" />
+              className="input-dark" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <label className="label-dark">Email</label>
             <input type="email" value={company.email} onChange={e => update('email', e.target.value)}
-              className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 shadow-sm" />
+              className="input-dark" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">GSTIN</label>
+            <label className="label-dark">GSTIN</label>
             <input type="text" value={company.gstin} onChange={e => update('gstin', e.target.value)}
-              className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 shadow-sm" />
+              className="input-dark" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">D.L. No.</label>
+            <label className="label-dark">D.L. No.</label>
             <input type="text" value={company.dlNo} onChange={e => update('dlNo', e.target.value)}
-              className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 shadow-sm" />
+              className="input-dark" />
           </div>
         </div>
-        <button type="submit"
-          className="w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 font-medium">
+        <button type="submit" className="btn-neon w-full text-center">
           Save Company Details
         </button>
       </form>

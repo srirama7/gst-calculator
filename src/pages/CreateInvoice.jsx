@@ -9,7 +9,8 @@ import toast from 'react-hot-toast'
 const emptyItem = {
   mfr: '', particulars: '', hsn: '', pack: '',
   qty: 0, free: 0, batchNo: '', exp: '',
-  mrp: 0, rate: 0, discount: 0, gstPercent: 18
+  mrp: 0, rate: 0, discount: 0, gstPercent: 18,
+  gstMode: 'exclude' // 'exclude' = rate is base price, GST added on top; 'include' = rate already has GST
 };
 
 export default function CreateInvoice() {
@@ -84,12 +85,22 @@ export default function CreateInvoice() {
     setInvoice(prev => {
       const items = [...prev.items];
       items[index] = { ...items[index], [field]: value };
-      // Recalculate amount
       const qty = parseFloat(items[index].qty) || 0;
       const rate = parseFloat(items[index].rate) || 0;
       const disc = parseFloat(items[index].discount) || 0;
-      const subtotal = qty * rate;
-      items[index].amount = subtotal - (subtotal * disc / 100);
+      const gstPercent = parseFloat(items[index].gstPercent) || 0;
+      const gstMode = items[index].gstMode || 'exclude';
+
+      if (gstMode === 'include') {
+        // Rate already includes GST, back-calculate base price
+        const baseRate = rate / (1 + gstPercent / 100);
+        const subtotal = qty * baseRate;
+        items[index].amount = subtotal - (subtotal * disc / 100);
+      } else {
+        // Rate is base price, GST will be added on top (default)
+        const subtotal = qty * rate;
+        items[index].amount = subtotal - (subtotal * disc / 100);
+      }
       return { ...prev, items };
     });
   }
@@ -109,23 +120,63 @@ export default function CreateInvoice() {
   const items = invoice.items;
   const subTotal = items.reduce((s, i) => s + (i.amount || 0), 0);
   const totalDiscount = items.reduce((s, i) => {
-    const sub = (parseFloat(i.qty) || 0) * (parseFloat(i.rate) || 0);
+    const qty = parseFloat(i.qty) || 0;
+    const rate = parseFloat(i.rate) || 0;
+    const gstPercent = parseFloat(i.gstPercent) || 0;
+    const gstMode = i.gstMode || 'exclude';
+    const baseRate = gstMode === 'include' ? rate / (1 + gstPercent / 100) : rate;
+    const sub = qty * baseRate;
     return s + (sub * (parseFloat(i.discount) || 0) / 100);
   }, 0);
   const taxableAmount = subTotal;
   const cgstAmount = items.reduce((s, i) => s + ((i.amount || 0) * (parseFloat(i.gstPercent) || 0) / 2 / 100), 0);
   const sgstAmount = cgstAmount;
-  const igstAmount = 0; // For inter-state, swap with cgst+sgst
+  const igstAmount = 0;
   const freight = parseFloat(invoice.freight) || 0;
   const beforeRound = taxableAmount + cgstAmount + sgstAmount + igstAmount + freight;
   const grandTotal = Math.round(beforeRound);
   const roundOff = +(grandTotal - beforeRound).toFixed(2);
 
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+
+  function buildInvoiceData() {
+    return {
+      ...invoice,
+      subTotal, discount: totalDiscount, taxableAmount,
+      cgstAmount, sgstAmount, igstAmount, freight, roundOff, grandTotal,
+      amountInWords: numberToWords(grandTotal)
+    };
+  }
+
+  function handlePreviewPDF() {
+    try {
+      const data = buildInvoiceData();
+      const pdfDoc = generateInvoicePDF(data, company);
+      const blob = pdfDoc.output('blob');
+      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+      const url = URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+    } catch (e) {
+      toast.error('PDF preview failed: ' + e.message);
+    }
+  }
+
+  function handleDownloadPDF() {
+    try {
+      const data = buildInvoiceData();
+      const pdfDoc = generateInvoicePDF(data, company);
+      pdfDoc.save(`Invoice_${invoice.invoiceNo || 'draft'}.pdf`);
+      toast.success('PDF downloaded!');
+    } catch (e) {
+      toast.error('PDF download failed: ' + e.message);
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     const data = {
       ...invoice,
-      invoiceNo: parseInt(invoice.invoiceNo),
+      invoiceNo: parseInt(invoice.invoiceNo) || 1,
       subTotal,
       discount: totalDiscount,
       taxableAmount,
@@ -150,64 +201,52 @@ export default function CreateInvoice() {
     setSaving(false);
   }
 
-  function handlePreviewPDF() {
-    const data = {
-      ...invoice,
-      subTotal, discount: totalDiscount, taxableAmount,
-      cgstAmount, sgstAmount, igstAmount, freight, roundOff, grandTotal,
-      amountInWords: numberToWords(grandTotal)
-    };
-    const pdfDoc = generateInvoicePDF(data, company);
-    const blob = pdfDoc.output('blob');
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-  }
-
-  const inputClass = "mt-1 block w-full rounded border-gray-300 border px-2 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500";
-  const labelClass = "block text-xs font-medium text-gray-600";
+  const inputSmall = "input-dark text-xs py-1.5 px-2";
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Create Invoice</h1>
-        <div className="flex gap-2">
-          <button onClick={handlePreviewPDF}
-            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 text-sm">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gradient">Create Invoice</h1>
+        <div className="flex gap-3">
+          <button onClick={handlePreviewPDF} className="btn-neon btn-glass text-sm">
             Preview PDF
           </button>
+          <button onClick={handleDownloadPDF} className="btn-neon btn-cyan text-sm">
+            Download PDF
+          </button>
           <button onClick={handleSave} disabled={saving}
-            className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 text-sm font-medium disabled:opacity-50">
+            className="btn-neon text-sm disabled:opacity-50">
             {saving ? 'Saving...' : 'Save Invoice'}
           </button>
         </div>
       </div>
 
       {/* Invoice Header */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="glass-card p-5 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <label className={labelClass}>Invoice No.</label>
+            <label className="label-dark">Invoice No.</label>
             <input type="number" value={invoice.invoiceNo}
               onChange={e => setInvoice(prev => ({ ...prev, invoiceNo: e.target.value }))}
-              className={inputClass} />
+              className="input-dark" />
           </div>
           <div>
-            <label className={labelClass}>Date</label>
+            <label className="label-dark">Date</label>
             <input type="text" value={invoice.date}
               onChange={e => setInvoice(prev => ({ ...prev, date: e.target.value }))}
-              className={inputClass} />
+              className="input-dark" />
           </div>
           <div>
-            <label className={labelClass}>Due Date</label>
+            <label className="label-dark">Due Date</label>
             <input type="text" value={invoice.dueDate}
               onChange={e => setInvoice(prev => ({ ...prev, dueDate: e.target.value }))}
-              className={inputClass} />
+              className="input-dark" />
           </div>
           <div>
-            <label className={labelClass}>Bill Type</label>
+            <label className="label-dark">Bill Type</label>
             <select value={invoice.billType}
               onChange={e => setInvoice(prev => ({ ...prev, billType: e.target.value }))}
-              className={inputClass}>
+              className="input-dark">
               <option>CREDIT BILL</option>
               <option>CASH BILL</option>
             </select>
@@ -216,130 +255,118 @@ export default function CreateInvoice() {
       </div>
 
       {/* Customer + Transport */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-sm font-bold text-gray-700">Customer Details</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        <div className="glass-card p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-sm font-bold text-gradient">Customer Details</h2>
             <select onChange={e => selectCustomer(e.target.value)}
-              className="text-xs border rounded px-2 py-1">
+              className="input-dark text-xs py-1.5 w-auto">
               <option value="">-- Select saved customer --</option>
               {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className={labelClass}>Name</label>
-              <input type="text" value={invoice.customer.name} onChange={e => updateCustomer('name', e.target.value)} className={inputClass} />
+              <label className="label-dark">Name</label>
+              <input type="text" value={invoice.customer.name} onChange={e => updateCustomer('name', e.target.value)} className="input-dark" />
             </div>
             <div className="col-span-2">
-              <label className={labelClass}>Address</label>
-              <input type="text" value={invoice.customer.address} onChange={e => updateCustomer('address', e.target.value)} className={inputClass} />
+              <label className="label-dark">Address</label>
+              <input type="text" value={invoice.customer.address} onChange={e => updateCustomer('address', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>City</label>
-              <input type="text" value={invoice.customer.city} onChange={e => updateCustomer('city', e.target.value)} className={inputClass} />
+              <label className="label-dark">City</label>
+              <input type="text" value={invoice.customer.city} onChange={e => updateCustomer('city', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>Pincode</label>
-              <input type="text" value={invoice.customer.pincode} onChange={e => updateCustomer('pincode', e.target.value)} className={inputClass} />
+              <label className="label-dark">Pincode</label>
+              <input type="text" value={invoice.customer.pincode} onChange={e => updateCustomer('pincode', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>GSTIN</label>
-              <input type="text" value={invoice.customer.gstin} onChange={e => updateCustomer('gstin', e.target.value)} className={inputClass} />
+              <label className="label-dark">GSTIN</label>
+              <input type="text" value={invoice.customer.gstin} onChange={e => updateCustomer('gstin', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>Phone</label>
-              <input type="text" value={invoice.customer.phone} onChange={e => updateCustomer('phone', e.target.value)} className={inputClass} />
+              <label className="label-dark">Phone</label>
+              <input type="text" value={invoice.customer.phone} onChange={e => updateCustomer('phone', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>D.L. No.</label>
-              <input type="text" value={invoice.customer.dlNo} onChange={e => updateCustomer('dlNo', e.target.value)} className={inputClass} />
+              <label className="label-dark">D.L. No.</label>
+              <input type="text" value={invoice.customer.dlNo} onChange={e => updateCustomer('dlNo', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>Rep Name</label>
-              <input type="text" value={invoice.repName} onChange={e => setInvoice(prev => ({ ...prev, repName: e.target.value }))} className={inputClass} />
+              <label className="label-dark">Rep Name</label>
+              <input type="text" value={invoice.repName} onChange={e => setInvoice(prev => ({ ...prev, repName: e.target.value }))} className="input-dark" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
-          <h2 className="text-sm font-bold text-gray-700 mb-3">Transport Details</h2>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="glass-card p-5">
+          <h2 className="text-sm font-bold text-gradient mb-4">Transport Details</h2>
+          <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className={labelClass}>Transport Name</label>
-              <input type="text" value={invoice.transport.name} onChange={e => updateTransport('name', e.target.value)} className={inputClass} />
+              <label className="label-dark">Transport Name</label>
+              <input type="text" value={invoice.transport.name} onChange={e => updateTransport('name', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>L.R. No.</label>
-              <input type="text" value={invoice.transport.lrNo} onChange={e => updateTransport('lrNo', e.target.value)} className={inputClass} />
+              <label className="label-dark">L.R. No.</label>
+              <input type="text" value={invoice.transport.lrNo} onChange={e => updateTransport('lrNo', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>L.R. Date</label>
-              <input type="text" value={invoice.transport.lrDate} onChange={e => updateTransport('lrDate', e.target.value)} className={inputClass} />
+              <label className="label-dark">L.R. Date</label>
+              <input type="text" value={invoice.transport.lrDate} onChange={e => updateTransport('lrDate', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>No of C/s</label>
-              <input type="text" value={invoice.transport.noOfCs} onChange={e => updateTransport('noOfCs', e.target.value)} className={inputClass} />
+              <label className="label-dark">No of C/s</label>
+              <input type="text" value={invoice.transport.noOfCs} onChange={e => updateTransport('noOfCs', e.target.value)} className="input-dark" />
             </div>
             <div>
-              <label className={labelClass}>Phone</label>
-              <input type="text" value={invoice.transport.phone} onChange={e => updateTransport('phone', e.target.value)} className={inputClass} />
+              <label className="label-dark">Phone</label>
+              <input type="text" value={invoice.transport.phone} onChange={e => updateTransport('phone', e.target.value)} className="input-dark" />
             </div>
           </div>
 
-          <h2 className="text-sm font-bold text-gray-700 mt-4 mb-2">Additional</h2>
+          <h2 className="text-sm font-bold text-gradient mt-5 mb-3">Additional</h2>
           <div>
-            <label className={labelClass}>Freight</label>
+            <label className="label-dark">Freight</label>
             <input type="number" step="0.01" value={invoice.freight}
               onChange={e => setInvoice(prev => ({ ...prev, freight: parseFloat(e.target.value) || 0 }))}
-              className={inputClass} />
+              className="input-dark" />
           </div>
         </div>
       </div>
 
       {/* Items Table */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4 overflow-x-auto">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-sm font-bold text-gray-700">Items</h2>
-          <button onClick={addItem} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">+ Add Item</button>
+      <div className="glass-card p-5 mb-5 overflow-x-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-sm font-bold text-gradient">Items</h2>
+          <button onClick={addItem} className="btn-neon btn-success text-xs py-1.5 px-4">+ Add Item</button>
         </div>
         <table className="min-w-full text-xs">
           <thead>
-            <tr className="bg-gray-50">
-              <th className="px-1 py-2">Sl</th>
-              <th className="px-1 py-2">Mfr</th>
-              <th className="px-1 py-2">Particulars</th>
-              <th className="px-1 py-2">HSN</th>
-              <th className="px-1 py-2">Pack</th>
-              <th className="px-1 py-2">Qty</th>
-              <th className="px-1 py-2">Free</th>
-              <th className="px-1 py-2">Batch No</th>
-              <th className="px-1 py-2">Exp</th>
-              <th className="px-1 py-2">MRP</th>
-              <th className="px-1 py-2">Rate</th>
-              <th className="px-1 py-2">Disc%</th>
-              <th className="px-1 py-2">GST%</th>
-              <th className="px-1 py-2">Amount</th>
-              <th className="px-1 py-2"></th>
+            <tr style={{ background: 'rgba(255,255,255,0.05)' }}>
+              {['Sl','Mfr','Particulars','HSN','Pack','Qty','Free','Batch No','Exp','MRP','Rate','Disc%','GST%','GST Mode','Amount',''].map(h => (
+                <th key={h} className="px-1 py-2 text-left text-gray-400 font-medium">{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {items.map((item, i) => (
-              <tr key={i} className="border-b">
-                <td className="px-1 py-1 text-center">{i + 1}</td>
-                <td><input type="text" value={item.mfr} onChange={e => updateItem(i, 'mfr', e.target.value)} className="w-14 border rounded px-1 py-1 text-xs" /></td>
-                <td><input type="text" value={item.particulars} onChange={e => updateItem(i, 'particulars', e.target.value)} className="w-36 border rounded px-1 py-1 text-xs" /></td>
-                <td><input type="text" value={item.hsn} onChange={e => updateItem(i, 'hsn', e.target.value)} className="w-14 border rounded px-1 py-1 text-xs" /></td>
-                <td><input type="text" value={item.pack} onChange={e => updateItem(i, 'pack', e.target.value)} className="w-14 border rounded px-1 py-1 text-xs" /></td>
-                <td><input type="number" value={item.qty} onChange={e => updateItem(i, 'qty', e.target.value)} className="w-12 border rounded px-1 py-1 text-xs" /></td>
-                <td><input type="number" value={item.free} onChange={e => updateItem(i, 'free', e.target.value)} className="w-10 border rounded px-1 py-1 text-xs" /></td>
-                <td><input type="text" value={item.batchNo} onChange={e => updateItem(i, 'batchNo', e.target.value)} className="w-16 border rounded px-1 py-1 text-xs" /></td>
-                <td><input type="text" value={item.exp} onChange={e => updateItem(i, 'exp', e.target.value)} className="w-14 border rounded px-1 py-1 text-xs" placeholder="MM/YY" /></td>
-                <td><input type="number" step="0.01" value={item.mrp} onChange={e => updateItem(i, 'mrp', e.target.value)} className="w-16 border rounded px-1 py-1 text-xs" /></td>
-                <td><input type="number" step="0.01" value={item.rate} onChange={e => updateItem(i, 'rate', e.target.value)} className="w-14 border rounded px-1 py-1 text-xs" /></td>
-                <td><input type="number" step="0.01" value={item.discount} onChange={e => updateItem(i, 'discount', e.target.value)} className="w-12 border rounded px-1 py-1 text-xs" /></td>
+              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <td className="px-1 py-1 text-center text-gray-400">{i + 1}</td>
+                <td><input type="text" value={item.mfr} onChange={e => updateItem(i, 'mfr', e.target.value)} className={`${inputSmall} w-14`} /></td>
+                <td><input type="text" value={item.particulars} onChange={e => updateItem(i, 'particulars', e.target.value)} className={`${inputSmall} w-36`} /></td>
+                <td><input type="text" value={item.hsn} onChange={e => updateItem(i, 'hsn', e.target.value)} className={`${inputSmall} w-14`} /></td>
+                <td><input type="text" value={item.pack} onChange={e => updateItem(i, 'pack', e.target.value)} className={`${inputSmall} w-14`} /></td>
+                <td><input type="number" value={item.qty} onChange={e => updateItem(i, 'qty', e.target.value)} className={`${inputSmall} w-12`} /></td>
+                <td><input type="number" value={item.free} onChange={e => updateItem(i, 'free', e.target.value)} className={`${inputSmall} w-10`} /></td>
+                <td><input type="text" value={item.batchNo} onChange={e => updateItem(i, 'batchNo', e.target.value)} className={`${inputSmall} w-16`} /></td>
+                <td><input type="text" value={item.exp} onChange={e => updateItem(i, 'exp', e.target.value)} className={`${inputSmall} w-14`} placeholder="MM/YY" /></td>
+                <td><input type="number" step="0.01" value={item.mrp} onChange={e => updateItem(i, 'mrp', e.target.value)} className={`${inputSmall} w-16`} /></td>
+                <td><input type="number" step="0.01" value={item.rate} onChange={e => updateItem(i, 'rate', e.target.value)} className={`${inputSmall} w-14`} /></td>
+                <td><input type="number" step="0.01" value={item.discount} onChange={e => updateItem(i, 'discount', e.target.value)} className={`${inputSmall} w-12`} /></td>
                 <td>
-                  <select value={item.gstPercent} onChange={e => updateItem(i, 'gstPercent', parseFloat(e.target.value))} className="w-14 border rounded px-1 py-1 text-xs">
+                  <select value={item.gstPercent} onChange={e => updateItem(i, 'gstPercent', parseFloat(e.target.value))} className={`${inputSmall} w-14`}>
                     <option value={0}>0%</option>
                     <option value={5}>5%</option>
                     <option value={12}>12%</option>
@@ -347,10 +374,16 @@ export default function CreateInvoice() {
                     <option value={28}>28%</option>
                   </select>
                 </td>
-                <td className="px-1 py-1 text-right font-medium">₹{(item.amount || 0).toFixed(2)}</td>
+                <td>
+                  <select value={item.gstMode || 'exclude'} onChange={e => updateItem(i, 'gstMode', e.target.value)} className={`${inputSmall} w-20`}>
+                    <option value="exclude">Excl.</option>
+                    <option value="include">Incl.</option>
+                  </select>
+                </td>
+                <td className="px-1 py-1 text-right font-medium" style={{ color: '#00ffcc' }}>{'\u20B9'}{(item.amount || 0).toFixed(2)}</td>
                 <td>
                   {items.length > 1 && (
-                    <button onClick={() => removeItem(i)} className="text-red-500 hover:text-red-700 px-1">x</button>
+                    <button onClick={() => removeItem(i)} style={{ color: '#ff6b6b' }} className="px-1 hover:opacity-70">x</button>
                   )}
                 </td>
               </tr>
@@ -360,38 +393,50 @@ export default function CreateInvoice() {
       </div>
 
       {/* Totals */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Sub Total:</span><span className="font-medium">₹{subTotal.toFixed(2)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Discount:</span><span className="font-medium">₹{totalDiscount.toFixed(2)}</span></div>
+      <div className="glass-card p-5 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm"><span className="text-gray-400">Sub Total:</span><span className="font-medium text-white">{'\u20B9'}{subTotal.toFixed(2)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-400">Discount:</span><span className="font-medium text-white">{'\u20B9'}{totalDiscount.toFixed(2)}</span></div>
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-gray-600">CGST:</span><span className="font-medium">₹{cgstAmount.toFixed(2)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-600">SGST:</span><span className="font-medium">₹{sgstAmount.toFixed(2)}</span></div>
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm"><span className="text-gray-400">CGST:</span><span className="font-medium text-white">{'\u20B9'}{cgstAmount.toFixed(2)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-400">SGST:</span><span className="font-medium text-white">{'\u20B9'}{sgstAmount.toFixed(2)}</span></div>
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-gray-600">IGST:</span><span className="font-medium">₹{igstAmount.toFixed(2)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Freight:</span><span className="font-medium">₹{freight.toFixed(2)}</span></div>
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm"><span className="text-gray-400">IGST:</span><span className="font-medium text-white">{'\u20B9'}{igstAmount.toFixed(2)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-400">Freight:</span><span className="font-medium text-white">{'\u20B9'}{freight.toFixed(2)}</span></div>
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-gray-600">Round Off:</span><span className="font-medium">₹{roundOff.toFixed(2)}</span></div>
-            <div className="flex justify-between text-lg border-t pt-2">
-              <span className="font-bold text-gray-800">GRAND TOTAL:</span>
-              <span className="font-bold text-indigo-700">₹{grandTotal.toFixed(2)}</span>
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm"><span className="text-gray-400">Round Off:</span><span className="font-medium text-white">{'\u20B9'}{roundOff.toFixed(2)}</span></div>
+            <div className="flex justify-between text-lg pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <span className="font-bold text-white">GRAND TOTAL:</span>
+              <span className="font-bold" style={{ color: '#00ffcc' }}>{'\u20B9'}{grandTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-2 italic">{numberToWords(grandTotal)}</p>
+        <p className="text-xs mt-3 italic" style={{ color: '#707070' }}>{numberToWords(grandTotal)}</p>
       </div>
 
       {/* Terms */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4">
-        <label className={labelClass}>Terms & Conditions</label>
+      <div className="glass-card p-5 mb-5">
+        <label className="label-dark">Terms & Conditions</label>
         <textarea value={invoice.terms}
           onChange={e => setInvoice(prev => ({ ...prev, terms: e.target.value }))}
-          rows={4} className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 text-sm shadow-sm" />
+          rows={4} className="input-dark mt-1" />
       </div>
+
+      {/* PDF Preview */}
+      {pdfPreviewUrl && (
+        <div className="glass-card p-5 mb-5">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-sm font-bold text-gradient">PDF Preview</h2>
+            <button onClick={() => { URL.revokeObjectURL(pdfPreviewUrl); setPdfPreviewUrl(null); }}
+              style={{ color: '#ff6b6b' }} className="text-sm hover:opacity-70">Close Preview</button>
+          </div>
+          <iframe src={pdfPreviewUrl} className="w-full rounded-xl" style={{ height: '80vh', border: '1px solid rgba(255,255,255,0.1)' }} title="Invoice PDF Preview" />
+        </div>
+      )}
     </div>
   );
 }

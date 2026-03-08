@@ -33,61 +33,83 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  if (loading) return <div className="text-center py-10">Loading...</div>;
+  if (loading) return <div className="text-center py-10 text-gray-400">Loading...</div>;
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <Link to="/invoice/new"
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 font-medium">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gradient">Dashboard</h1>
+        <Link to="/invoice/new" className="btn-neon">
           + New Invoice
         </Link>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-gray-500">Total Invoices</p>
-          <p className="text-3xl font-bold text-indigo-600">{stats.count}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="glass-card glass-card-glow p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+              style={{ background: 'linear-gradient(135deg, #00ffcc, #00ccff)' }}>
+              <span role="img">&#128202;</span>
+            </div>
+            <span className="text-sm text-gray-400">Total Invoices</span>
+          </div>
+          <p className="stat-neon">{stats.count}</p>
+          <p className="text-xs text-gray-500 mt-2">All time invoices created</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-gray-500">Total Revenue</p>
-          <p className="text-3xl font-bold text-green-600">₹{stats.total.toFixed(2)}</p>
+        <div className="glass-card glass-card-glow p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+              style={{ background: 'linear-gradient(135deg, #4ade80, #22c55e)' }}>
+              <span role="img">&#128176;</span>
+            </div>
+            <span className="text-sm text-gray-400">Total Revenue</span>
+          </div>
+          <p className="stat-neon">{'\u20B9'}{stats.total.toFixed(2)}</p>
+          <p className="text-xs text-gray-500 mt-2">Cumulative revenue generated</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-gray-500">Total GST Collected</p>
-          <p className="text-3xl font-bold text-orange-600">₹{stats.gst.toFixed(2)}</p>
+        <div className="glass-card glass-card-glow p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+              style={{ background: 'linear-gradient(135deg, #ff6b6b, #ff8e53)' }}>
+              <span role="img">&#127919;</span>
+            </div>
+            <span className="text-sm text-gray-400">Total GST Collected</span>
+          </div>
+          <p className="stat-neon">{'\u20B9'}{stats.gst.toFixed(2)}</p>
+          <p className="text-xs text-gray-500 mt-2">CGST + SGST + IGST collected</p>
         </div>
       </div>
 
       {/* Recent Invoices */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <h2 className="px-6 py-4 text-lg font-semibold border-b">Recent Invoices</h2>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="glass-card overflow-hidden">
+        <h2 className="px-6 py-4 text-lg font-semibold text-gradient" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          Recent Invoices
+        </h2>
+        <table className="table-dark">
+          <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Inv No</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grand Total</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th>Inv No</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Grand Total</th>
+              <th>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody>
             {invoices.map(inv => (
-              <tr key={inv.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium">{inv.invoiceNo}</td>
-                <td className="px-4 py-3 text-sm">{inv.date}</td>
-                <td className="px-4 py-3 text-sm">{inv.customer?.name || '-'}</td>
-                <td className="px-4 py-3 text-sm font-semibold">₹{inv.grandTotal?.toFixed(2)}</td>
-                <td className="px-4 py-3 text-sm">
-                  <Link to={`/invoice/${inv.id}`} className="text-indigo-600 hover:text-indigo-800">View</Link>
+              <tr key={inv.id}>
+                <td className="font-medium text-white">{inv.invoiceNo}</td>
+                <td>{inv.date}</td>
+                <td>{inv.customer?.name || '-'}</td>
+                <td className="font-semibold" style={{ color: '#00ffcc' }}>{'\u20B9'}{inv.grandTotal?.toFixed(2)}</td>
+                <td>
+                  <Link to={`/invoice/${inv.id}`} className="text-sm" style={{ color: '#00ccff' }}>View</Link>
                 </td>
               </tr>
             ))}
             {invoices.length === 0 && (
-              <tr><td colSpan="5" className="px-4 py-6 text-center text-gray-400">No invoices yet. Create your first!</td></tr>
+              <tr><td colSpan="5" className="text-center py-6" style={{ color: '#707070' }}>No invoices yet. Create your first!</td></tr>
             )}
           </tbody>
         </table>

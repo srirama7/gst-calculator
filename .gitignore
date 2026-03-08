@@ -9,3 +9,5 @@ android/capacitor-cordova-android-plugins/build
 android/capacitor-android/build
 .idea
 *.iml
+
+.vercel

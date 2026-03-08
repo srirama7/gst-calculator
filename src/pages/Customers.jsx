@@ -54,58 +54,58 @@ export default function Customers() {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
-  if (loading) return <div className="text-center py-10">Loading...</div>;
+  if (loading) return <div className="text-center py-10 text-gray-400">Loading...</div>;
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Customers</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gradient">Customers</h1>
         <button onClick={() => setShowForm(!showForm)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+          className={showForm ? 'btn-neon btn-glass' : 'btn-neon'}>
           {showForm ? 'Cancel' : '+ Add Customer'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleAdd} className="bg-white rounded-lg shadow p-6 mb-6">
+        <form onSubmit={handleAdd} className="glass-card p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.keys(emptyCustomer).map(field => (
               <div key={field}>
-                <label className="block text-sm font-medium text-gray-700 capitalize">{field.replace(/([A-Z])/g, ' $1')}</label>
+                <label className="label-dark capitalize">{field.replace(/([A-Z])/g, ' $1')}</label>
                 <input type="text" value={form[field]} onChange={e => update(field, e.target.value)}
-                  className="mt-1 block w-full rounded border-gray-300 border px-3 py-2 shadow-sm" />
+                  className="input-dark" />
               </div>
             ))}
           </div>
-          <button type="submit" className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Save</button>
+          <button type="submit" className="btn-neon btn-success mt-5">Save Customer</button>
         </form>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="glass-card overflow-hidden">
+        <table className="table-dark">
+          <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">City</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">GSTIN</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th>Name</th>
+              <th>City</th>
+              <th>GSTIN</th>
+              <th>Phone</th>
+              <th>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody>
             {customers.map(c => (
               <tr key={c.id}>
-                <td className="px-4 py-3 text-sm font-medium">{c.name}</td>
-                <td className="px-4 py-3 text-sm">{c.city}</td>
-                <td className="px-4 py-3 text-sm">{c.gstin}</td>
-                <td className="px-4 py-3 text-sm">{c.phone}</td>
-                <td className="px-4 py-3 text-sm">
-                  <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                <td className="font-medium text-white">{c.name}</td>
+                <td>{c.city}</td>
+                <td>{c.gstin}</td>
+                <td>{c.phone}</td>
+                <td>
+                  <button onClick={() => handleDelete(c.id)} className="text-sm" style={{ color: '#ff6b6b' }}>Delete</button>
                 </td>
               </tr>
             ))}
             {customers.length === 0 && (
-              <tr><td colSpan="5" className="px-4 py-6 text-center text-gray-400">No customers yet</td></tr>
+              <tr><td colSpan="5" className="text-center py-6" style={{ color: '#707070' }}>No customers yet</td></tr>
             )}
           </tbody>
         </table>

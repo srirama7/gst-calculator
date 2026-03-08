@@ -5,11 +5,17 @@ import { doc, getDoc } from 'firebase/firestore'
 import { generateInvoicePDF } from '../utils/generatePDF'
 import toast from 'react-hot-toast'
 
+function safeFixed(val, digits = 2) {
+  const num = parseFloat(val);
+  return isNaN(num) ? '0.00' : num.toFixed(digits);
+}
+
 export default function ViewInvoice() {
   const { id } = useParams();
   const [invoice, setInvoice] = useState(null);
   const [company, setCompany] = useState({});
   const [loading, setLoading] = useState(true);
+  const [pdfUrl, setPdfUrl] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -21,8 +27,23 @@ export default function ViewInvoice() {
         getDoc(doc(db, 'invoices', id)),
         getDoc(doc(db, 'companies', 'default'))
       ]);
-      if (invSnap.exists()) setInvoice({ id: invSnap.id, ...invSnap.data() });
-      if (compSnap.exists()) setCompany(compSnap.data());
+      let inv = null;
+      let comp = {};
+      if (invSnap.exists()) inv = { id: invSnap.id, ...invSnap.data() };
+      if (compSnap.exists()) comp = compSnap.data();
+      setInvoice(inv);
+      setCompany(comp);
+
+      // Auto-generate PDF preview
+      if (inv) {
+        try {
+          const pdfDoc = generateInvoicePDF(inv, comp);
+          const blob = pdfDoc.output('blob');
+          setPdfUrl(URL.createObjectURL(blob));
+        } catch (e) {
+          console.error('PDF generation failed:', e);
+        }
+      }
     } catch (e) {
       toast.error('Failed to load: ' + e.message);
     }
@@ -30,125 +51,107 @@ export default function ViewInvoice() {
   }
 
   function handleDownload() {
-    const pdfDoc = generateInvoicePDF(invoice, company);
-    pdfDoc.save(`Invoice_${invoice.invoiceNo}.pdf`);
-    toast.success('PDF downloaded!');
+    try {
+      const pdfDoc = generateInvoicePDF(invoice, company);
+      pdfDoc.save(`Invoice_${invoice.invoiceNo || 'draft'}.pdf`);
+      toast.success('PDF downloaded!');
+    } catch (e) {
+      toast.error('PDF download failed: ' + e.message);
+    }
   }
 
-  function handlePreview() {
-    const pdfDoc = generateInvoicePDF(invoice, company);
-    const blob = pdfDoc.output('blob');
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+  function handleRegenerate() {
+    try {
+      const pdfDoc = generateInvoicePDF(invoice, company);
+      const blob = pdfDoc.output('blob');
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(URL.createObjectURL(blob));
+    } catch (e) {
+      toast.error('PDF preview failed: ' + e.message);
+    }
   }
 
-  if (loading) return <div className="text-center py-10">Loading...</div>;
-  if (!invoice) return <div className="text-center py-10">Invoice not found</div>;
-
-  const items = invoice.items || [];
+  if (loading) return <div className="text-center py-10 text-gray-400">Loading...</div>;
+  if (!invoice) return <div className="text-center py-10 text-gray-400">Invoice not found</div>;
 
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Link to="/" className="text-indigo-600 hover:text-indigo-800 text-sm">&larr; Back to Dashboard</Link>
-          <h1 className="text-2xl font-bold mt-1">Invoice #{invoice.invoiceNo}</h1>
+          <Link to="/" style={{ color: '#00ccff' }} className="text-sm hover:opacity-70">&larr; Back to Dashboard</Link>
+          <h1 className="text-2xl font-bold text-gradient mt-1">Invoice #{invoice.invoiceNo}</h1>
         </div>
-        <div className="flex gap-2">
-          <button onClick={handlePreview}
-            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 text-sm">
-            Preview PDF
+        <div className="flex gap-3">
+          <button onClick={handleRegenerate} className="btn-neon btn-glass text-sm">
+            Refresh Preview
           </button>
-          <button onClick={handleDownload}
-            className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 text-sm font-medium">
+          <button onClick={handleDownload} className="btn-neon btn-cyan text-sm">
             Download PDF
           </button>
         </div>
       </div>
 
-      {/* Invoice Preview Card */}
-      <div className="bg-white rounded-lg shadow p-6">
+      {/* PDF Preview - shown by default */}
+      {pdfUrl && (
+        <div className="glass-card p-5 mb-6">
+          <h2 className="text-sm font-bold text-gradient mb-3">Invoice PDF</h2>
+          <iframe src={pdfUrl} className="w-full rounded-xl" style={{ height: '85vh', border: '1px solid rgba(255,255,255,0.1)' }} title="Invoice PDF Preview" />
+        </div>
+      )}
+
+      {/* Invoice Details Summary */}
+      <div className="glass-card p-6">
+        <h2 className="text-sm font-bold text-gradient mb-4">Invoice Details</h2>
+
         {/* Header */}
-        <div className="text-center border-b pb-4 mb-4">
+        <div className="text-center pb-5 mb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           <p className="text-xs text-gray-500">TAX INVOICE</p>
-          <h2 className="text-xl font-bold">{company.name}</h2>
-          <p className="text-sm text-gray-600">{company.address}</p>
-          <p className="text-sm text-gray-600">{company.city} - {company.pincode}</p>
+          <h2 className="text-xl font-bold text-gradient">{company.name}</h2>
+          <p className="text-sm text-gray-400">{company.address}</p>
+          <p className="text-sm text-gray-400">{company.city} - {company.pincode}</p>
           <p className="text-xs text-gray-500">Ph: {company.phone} | Email: {company.email}</p>
           <p className="text-xs text-gray-500">GSTIN: {company.gstin} | D.L.No: {company.dlNo}</p>
         </div>
 
         {/* Invoice info */}
-        <div className="flex justify-between border-b pb-3 mb-4">
-          <div><span className="font-semibold text-sm">INV No:</span> <span className="text-sm">{invoice.invoiceNo}</span></div>
-          <div className="font-semibold text-sm">{invoice.billType}</div>
-          <div><span className="font-semibold text-sm">Date:</span> <span className="text-sm">{invoice.date}</span></div>
+        <div className="flex justify-between pb-4 mb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <div><span className="font-semibold text-sm text-gray-300">INV No:</span> <span className="text-sm" style={{ color: '#00ffcc' }}>{invoice.invoiceNo}</span></div>
+          <div className="font-semibold text-sm text-gray-300">{invoice.billType}</div>
+          <div><span className="font-semibold text-sm text-gray-300">Date:</span> <span className="text-sm text-gray-400">{invoice.date}</span></div>
         </div>
 
         {/* Customer + Transport */}
-        <div className="grid grid-cols-2 gap-4 border-b pb-4 mb-4 text-sm">
+        <div className="grid grid-cols-2 gap-6 pb-5 mb-5 text-sm" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           <div>
-            <p className="font-bold italic">{invoice.customer?.name}</p>
-            <p>{invoice.customer?.address}</p>
-            <p>{invoice.customer?.city} - {invoice.customer?.pincode}</p>
-            <p>GSTIN: {invoice.customer?.gstin}</p>
-            <p>Phone: {invoice.customer?.phone}</p>
-            <p>Rep: {invoice.repName}</p>
+            <p className="font-bold italic" style={{ color: '#00ffcc' }}>{invoice.customer?.name}</p>
+            <p className="text-gray-400">{invoice.customer?.address}</p>
+            <p className="text-gray-400">{invoice.customer?.city} - {invoice.customer?.pincode}</p>
+            <p className="text-gray-400">GSTIN: {invoice.customer?.gstin}</p>
+            <p className="text-gray-400">Phone: {invoice.customer?.phone}</p>
+            <p className="text-gray-400">Rep: {invoice.repName}</p>
           </div>
-          <div>
+          <div className="text-gray-400">
             <p>Transport: {invoice.transport?.name}</p>
             <p>L.R. No: {invoice.transport?.lrNo}</p>
             <p>L.R. Date: {invoice.transport?.lrDate}</p>
           </div>
         </div>
 
-        {/* Items */}
-        <table className="min-w-full text-xs mb-4 border">
-          <thead className="bg-gray-50">
-            <tr>
-              {['Sl','Mfr','Particulars','HSN','Pack','Qty','Free','Batch','Exp','MRP','Rate','Amount','Disc','GST%'].map(h => (
-                <th key={h} className="border px-2 py-1">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, i) => (
-              <tr key={i} className="border-b">
-                <td className="border px-2 py-1 text-center">{i + 1}</td>
-                <td className="border px-2 py-1">{item.mfr}</td>
-                <td className="border px-2 py-1">{item.particulars}</td>
-                <td className="border px-2 py-1 text-center">{item.hsn}</td>
-                <td className="border px-2 py-1 text-center">{item.pack}</td>
-                <td className="border px-2 py-1 text-center">{item.qty}</td>
-                <td className="border px-2 py-1 text-center">{item.free}</td>
-                <td className="border px-2 py-1">{item.batchNo}</td>
-                <td className="border px-2 py-1">{item.exp}</td>
-                <td className="border px-2 py-1 text-right">{item.mrp?.toFixed(2)}</td>
-                <td className="border px-2 py-1 text-right">{item.rate?.toFixed(2)}</td>
-                <td className="border px-2 py-1 text-right font-medium">{item.amount?.toFixed(2)}</td>
-                <td className="border px-2 py-1 text-right">{item.discount}</td>
-                <td className="border px-2 py-1 text-center">{item.gstPercent}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
         {/* Totals */}
-        <div className="grid grid-cols-2 gap-8 border-t pt-4">
-          <div className="text-sm space-y-1">
-            <p className="italic text-xs text-gray-600">{invoice.amountInWords}</p>
-            <div className="mt-3 text-xs text-gray-500 whitespace-pre-line">{invoice.terms}</div>
+        <div className="grid grid-cols-2 gap-8 pt-5" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="text-sm space-y-2">
+            <p className="italic text-xs" style={{ color: '#707070' }}>{invoice.amountInWords}</p>
           </div>
-          <div className="text-sm space-y-1">
-            <div className="flex justify-between"><span>Sub Total:</span><span>₹{invoice.subTotal?.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>Discount:</span><span>₹{invoice.discount?.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>CGST:</span><span>₹{invoice.cgstAmount?.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>SGST:</span><span>₹{invoice.sgstAmount?.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>IGST:</span><span>₹{invoice.igstAmount?.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>Freight:</span><span>₹{invoice.freight?.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>Round Off:</span><span>₹{invoice.roundOff?.toFixed(2)}</span></div>
-            <div className="flex justify-between border-t pt-2 text-lg font-bold">
-              <span>GRAND TOTAL:</span><span>₹{invoice.grandTotal?.toFixed(2)}</span>
+          <div className="text-sm space-y-2">
+            <div className="flex justify-between"><span className="text-gray-400">Sub Total:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.subTotal)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Discount:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.discount)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">CGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.cgstAmount)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">SGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.sgstAmount)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">IGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.igstAmount)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Freight:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.freight)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Round Off:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.roundOff)}</span></div>
+            <div className="flex justify-between text-lg font-bold pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <span className="text-white">GRAND TOTAL:</span><span style={{ color: '#00ffcc' }}>{'\u20B9'}{safeFixed(invoice.grandTotal)}</span>
             </div>
           </div>
         </div>
