@@ -37,9 +37,9 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gradient">Dashboard</h1>
-        <Link to="/invoice/new" className="btn-neon">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gradient">Dashboard</h1>
+        <Link to="/invoice/new" className="btn-neon text-sm py-2 px-4">
           + New Invoice
         </Link>
       </div>
@@ -83,10 +83,11 @@ export default function Dashboard() {
 
       {/* Recent Invoices */}
       <div className="glass-card overflow-hidden">
-        <h2 className="px-6 py-4 text-lg font-semibold text-gradient" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <h2 className="px-4 sm:px-6 py-4 text-base sm:text-lg font-semibold text-gradient" style={{ borderBottom: '1px solid var(--border-color)' }}>
           Recent Invoices
         </h2>
-        <table className="table-dark">
+        <div className="overflow-x-auto">
+        <table className="table-dark min-w-[500px]">
           <thead>
             <tr>
               <th>Inv No</th>
@@ -102,17 +103,18 @@ export default function Dashboard() {
                 <td className="font-medium text-white">{inv.invoiceNo}</td>
                 <td>{inv.date}</td>
                 <td>{inv.customer?.name || '-'}</td>
-                <td className="font-semibold" style={{ color: '#00ffcc' }}>{'\u20B9'}{inv.grandTotal?.toFixed(2)}</td>
+                <td className="font-semibold" style={{ color: 'var(--success-text)' }}>{'\u20B9'}{inv.grandTotal?.toFixed(2)}</td>
                 <td>
                   <Link to={`/invoice/${inv.id}`} className="text-sm" style={{ color: '#00ccff' }}>View</Link>
                 </td>
               </tr>
             ))}
             {invoices.length === 0 && (
-              <tr><td colSpan="5" className="text-center py-6" style={{ color: '#707070' }}>No invoices yet. Create your first!</td></tr>
+              <tr><td colSpan="5" className="text-center py-6" style={{ color: 'var(--text-muted)' }}>No invoices yet. Create your first!</td></tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

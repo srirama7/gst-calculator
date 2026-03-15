@@ -73,32 +73,38 @@ export function generateInvoicePDF(invoice, company) {
   // --- CUSTOMER + TRANSPORT SECTION ---
   y += 1;
   const custX = margin + 3;
-  const midX = pageWidth / 2 + 5;
+  const midX = pageWidth * 0.38;
+  const transX = pageWidth * 0.72;
 
+  // Left column - Customer name & address (wrap text to fit within column)
+  const custColWidth = midX - 3 - custX - 2;
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bolditalic');
-  doc.text(s(customer.name), custX, y + 4);
+  const nameLines = doc.splitTextToSize(s(customer.name), custColWidth);
+  doc.text(nameLines, custX, y + 4);
 
   doc.setFont('helvetica', 'normal');
-  doc.text(s(customer.address), custX, y + 8);
-  doc.text(s(customer.city), custX, y + 12);
-  doc.text(s(customer.pincode), custX, y + 16);
+  const addrLines = doc.splitTextToSize(s(customer.address), custColWidth);
+  let addrY = y + 4 + nameLines.length * 4;
+  doc.text(addrLines, custX, addrY);
+  addrY += addrLines.length * 3.5;
+  doc.text(s(customer.city), custX, addrY);
+  doc.text(s(customer.pincode), custX, addrY + 4);
 
-  doc.text(`GSTNo.: ${s(customer.gstin)}`, custX, y + 22);
-  doc.text(`Phone  : ${s(customer.phone)}`, custX, y + 26);
-  doc.text(`Rep Name: ${s(invoice.repName)}`, custX, y + 30);
+  // Vertical divider after address
+  doc.line(midX - 3, y, midX - 3, y + 33);
 
-  // Vertical divider
-  doc.line(midX - 5, y, midX - 5, y + 33);
-
-  // Right side - D.L.No and Transport
+  // Middle column - D.L.No, GSTNo, Phone, Rep Name
   doc.text(`D.L.No.:`, midX, y + 4);
   doc.text(s(customer.dlNo), midX + 20, y + 4);
+  doc.text(`GSTNo.: ${s(customer.gstin)}`, midX, y + 10);
+  doc.text(`Phone  : ${s(customer.phone)}`, midX, y + 16);
+  doc.text(`Rep Name: ${s(invoice.repName)}`, midX, y + 22);
 
-  // Transport column
-  const transX = pageWidth * 0.72;
+  // Vertical divider before transport
   doc.line(transX - 3, y, transX - 3, y + 33);
 
+  // Right column - Transport
   doc.text('Transport:', transX, y + 4);
   doc.text(s(transport.name), transX + 22, y + 4);
   doc.text('L.R. No.', transX, y + 8);
@@ -132,6 +138,11 @@ export function generateInvoicePDF(invoice, company) {
     n(item.gstPercent) ? n(item.gstPercent).toFixed(2) : ''
   ]);
 
+  // Calculate where the bottom section starts
+  const bottomSectionHeight = 95;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const tableTargetEndY = pageHeight - margin - bottomSectionHeight;
+
   doc.autoTable({
     startY: y,
     margin: { left: margin, right: margin },
@@ -143,7 +154,8 @@ export function generateInvoicePDF(invoice, company) {
       cellPadding: 1,
       lineColor: [0, 0, 0],
       lineWidth: 0.3,
-      textColor: [0, 0, 0]
+      textColor: [0, 0, 0],
+      minCellHeight: 6
     },
     headStyles: {
       fillColor: [255, 255, 255],
@@ -172,11 +184,31 @@ export function generateInvoicePDF(invoice, company) {
     didDrawPage: function () {
       doc.setDrawColor(0);
       doc.setLineWidth(0.5);
-      doc.rect(margin, margin, contentWidth, doc.internal.pageSize.getHeight() - margin * 2);
+      doc.rect(margin, margin, contentWidth, pageHeight - margin * 2);
     }
   });
 
-  y = doc.lastAutoTable.finalY;
+  const tableEndY = doc.lastAutoTable.finalY;
+
+  // Draw vertical column lines continuing down through the empty area (no horizontal lines)
+  if (tableEndY < tableTargetEndY) {
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.3);
+    // Draw outer left and right borders
+    doc.line(margin, tableEndY, margin, tableTargetEndY);
+    doc.line(pageWidth - margin, tableEndY, pageWidth - margin, tableTargetEndY);
+    // Draw bottom border of the empty area
+    doc.line(margin, tableTargetEndY, pageWidth - margin, tableTargetEndY);
+    // Draw vertical lines for each column divider
+    const colWidths = [7, 12, 38, 12, 11, 9, 9, 16, 12, 14, 13, 17, 10, 12];
+    let colX = margin;
+    for (let i = 0; i < colWidths.length - 1; i++) {
+      colX += colWidths[i];
+      doc.line(colX, tableEndY, colX, tableTargetEndY);
+    }
+  }
+
+  y = tableTargetEndY;
 
   // --- TAX SUMMARY SECTION ---
   const taxGroups = {};
@@ -190,55 +222,69 @@ export function generateInvoicePDF(invoice, company) {
     taxGroups[gst].sgst += (n(item.amount) * gst / 2) / 100;
   });
 
-  y += 1;
+  // Flash line
   doc.line(margin, y, pageWidth - margin, y);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.text('Flash:', margin + 3, y + 4);
-  doc.text(`Page No. 1`, pageWidth - margin - 3, y + 4, { align: 'right' });
+  doc.text('Page No.  1', pageWidth - margin - 3, y + 4, { align: 'right' });
   y += 6;
   doc.line(margin, y, pageWidth - margin, y);
 
-  const taxRows = Object.keys(taxGroups).map(gst => [
-    taxGroups[gst].taxable.toFixed(2),
-    (parseFloat(gst) / 2).toFixed(2),
-    taxGroups[gst].cgst.toFixed(2),
-    (parseFloat(gst) / 2).toFixed(2),
-    taxGroups[gst].sgst.toFixed(2),
-    '',
-    '0.00'
-  ]);
+  // Divider line between tax table (left) and summary (right)
+  const summaryDividerX = pageWidth * 0.52;
+  const bottomSectionStartY = y;
 
-  doc.autoTable({
-    startY: y,
-    margin: { left: margin, right: margin + contentWidth * 0.45 },
-    head: [['Taxable', 'CGST%', 'CGST Amt', 'SGST%', 'SGST Amt', 'Exempted', 'FreeGST']],
-    body: taxRows,
-    theme: 'grid',
-    styles: {
-      fontSize: 6,
-      cellPadding: 1,
-      lineColor: [0, 0, 0],
-      lineWidth: 0.2,
-      textColor: [0, 0, 0]
-    },
-    headStyles: {
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-      fontStyle: 'bold',
-      lineColor: [0, 0, 0]
-    }
+  // --- LEFT SIDE: Tax breakdown table (drawn manually for exact control) ---
+  const taxKeys = Object.keys(taxGroups);
+  const taxTableHeaders = ['Taxable', 'CGST%', 'CGST Amt', 'SGST%', 'SGST Amt', 'Exempted', 'FreeGST'];
+  const taxColWidths = [16, 10, 14, 10, 14, 16, 14];
+  const taxTableLeftX = margin;
+  const taxTableWidth = summaryDividerX - margin;
+
+  // Draw tax table header
+  doc.setFontSize(5.5);
+  doc.setFont('helvetica', 'bold');
+  let txX = taxTableLeftX;
+  const taxHeaderY = y;
+  taxColWidths.forEach((w, i) => {
+    doc.text(taxTableHeaders[i], txX + 1, y + 3.5);
+    txX += (taxTableWidth / taxColWidths.reduce((a, b) => a + b, 0)) * w;
+  });
+  y += 5;
+  doc.line(margin, y, summaryDividerX, y);
+
+  // Draw tax data rows
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(5.5);
+  taxKeys.forEach(gst => {
+    txX = taxTableLeftX;
+    const row = [
+      taxGroups[gst].taxable.toFixed(2),
+      (parseFloat(gst) / 2).toFixed(2),
+      taxGroups[gst].cgst.toFixed(2),
+      (parseFloat(gst) / 2).toFixed(2),
+      taxGroups[gst].sgst.toFixed(2),
+      '',
+      '0.00'
+    ];
+    const totalW = taxColWidths.reduce((a, b) => a + b, 0);
+    row.forEach((val, i) => {
+      doc.text(val, txX + 1, y + 3.5);
+      txX += (taxTableWidth / totalW) * taxColWidths[i];
+    });
+    y += 5;
   });
 
-  const taxTableEndY = doc.lastAutoTable.finalY;
+  const taxTableEndY = y;
 
   // --- RIGHT SIDE SUMMARY ---
-  const summaryX = pageWidth * 0.55;
-  const labelX = summaryX + 2;
+  const labelX = summaryDividerX + 2;
+  const summaryLabelX = summaryDividerX + 22;
   const valX = pageWidth - margin - 3;
-  let sy = y + 2;
+  let sy = bottomSectionStartY + 1;
 
-  doc.setFontSize(7);
+  doc.setFontSize(6.5);
   doc.setFont('helvetica', 'normal');
 
   const totalItems = items.reduce((sum, i) => sum + n(i.qty), 0);
@@ -249,40 +295,58 @@ export function generateInvoicePDF(invoice, company) {
     [`PC/BC :`, `CGST Amount`, n(invoice.cgstAmount).toFixed(2)],
     [`Cr/Db Amt`, `SGST Amount`, n(invoice.sgstAmount).toFixed(2)],
     [``, `IGST Amount`, n(invoice.igstAmount).toFixed(2)],
-    [`Freight    ${n(invoice.freight).toFixed(2)}`, `Round Off`, n(invoice.roundOff).toFixed(2)],
   ];
 
   summaryLines.forEach(([left, label, value]) => {
-    doc.text(left, labelX, sy + 3);
-    doc.text(label, labelX + 28, sy + 3);
-    doc.text(value, valX, sy + 3, { align: 'right' });
+    doc.text(left, labelX, sy + 4);
+    doc.text(label, summaryLabelX, sy + 4);
+    doc.text(value, valX, sy + 4, { align: 'right' });
     sy += 5;
   });
 
-  // Grand Total
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  sy += 2;
-  doc.line(summaryX, sy - 2, pageWidth - margin, sy - 2);
-  doc.text(`Due Date    ${s(invoice.dueDate)}`, margin + 3, sy + 3);
-  doc.text('GRAND TOTAL :', labelX, sy + 3);
-  doc.text(n(invoice.grandTotal).toFixed(2), valX, sy + 3, { align: 'right' });
+  // Freight + Round Off on same row area
+  doc.text(`Freight    ${n(invoice.freight).toFixed(2)}`, labelX, sy + 4);
+  doc.text('Round Off', summaryLabelX, sy + 4);
+  doc.text(n(invoice.roundOff).toFixed(2), valX, sy + 4, { align: 'right' });
+  sy += 6;
 
-  y = Math.max(taxTableEndY, sy + 6);
-  y += 3;
+  // Grand Total line
+  doc.setLineWidth(0.4);
+  doc.line(summaryDividerX, sy, pageWidth - margin, sy);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('GRAND TOTAL :', summaryLabelX - 2, sy + 5);
+  doc.text(n(invoice.grandTotal).toFixed(2), valX, sy + 5, { align: 'right' });
+  sy += 8;
+
+  // Vertical divider between left tax table and right summary
+  doc.setLineWidth(0.3);
+  doc.line(summaryDividerX, bottomSectionStartY, summaryDividerX, Math.max(taxTableEndY, sy));
+
+  // Vertical divider between left labels (Items/Total Items) and right labels (Sub Total/CGST) in summary
+  doc.line(summaryLabelX - 2, bottomSectionStartY, summaryLabelX - 2, Math.max(taxTableEndY, sy));
+
+  // Due Date row
+  y = Math.max(taxTableEndY, sy) + 1;
+  doc.line(margin, y, pageWidth - margin, y);
+
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Due Date    ${s(invoice.dueDate)}`, margin + 3, y + 4);
+  y += 6;
   doc.line(margin, y, pageWidth - margin, y);
 
   // --- AMOUNT IN WORDS ---
-  y += 1;
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bolditalic');
   const amtWords = s(invoice.amountInWords) || numberToWords(n(invoice.grandTotal));
   doc.text(amtWords, margin + 3, y + 4);
 
   // --- TERMS ---
-  y += 8;
+  y += 6;
+  doc.line(margin, y, pageWidth - margin, y);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6);
+  doc.setFontSize(5.5);
   const terms = invoice.terms || [
     '1) We are registered under GST Rule and liable to pay tax.',
     '2) Goods once sold will not be taken back or exchanged',
@@ -291,19 +355,28 @@ export function generateInvoicePDF(invoice, company) {
   ];
   const termsArray = Array.isArray(terms) ? terms : String(terms).split('\n');
   termsArray.forEach((t, i) => {
-    doc.text(s(t), margin + 3, y + (i * 3.5));
+    doc.text(s(t), margin + 3, y + 4 + (i * 3.5));
   });
 
-  y += termsArray.length * 3.5 + 2;
-  doc.setFontSize(6);
-  doc.text(`E. & O.E. Subject to ${s(company.city)}-${s(company.pincode)} Jurisdiction`, margin + 3, y);
-
-  // --- AUTHORIZED SIGNATORY ---
+  // "For Company Name" top-right of the bottom area (aligned with terms)
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text(`For ${s(company.name)}`, pageWidth - margin - 5, y - 10, { align: 'right' });
+  doc.text(`For ${s(company.name)}`, pageWidth - margin - 5, y + 5, { align: 'right' });
+
+  y += 4 + termsArray.length * 3.5 + 2;
+
+  // --- BOTTOM BOX: E&OE (left) + Signatory (right) ---
+  const bottomBoxBottomY = pageHeight - margin;
+
+  // E. & O.E. text on the left
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`E. & O.E. Subject to ${s(company.city)}-${s(company.pincode)} Jurisdiction`, margin + 3, y + 4);
+
+  // "Authorised Signatory" bottom-right inside the box
   doc.setFontSize(7);
-  doc.text('Authorised Signatory', pageWidth - margin - 5, y, { align: 'right' });
+  doc.setFont('helvetica', 'bold');
+  doc.text('Authorised Signatory', pageWidth - margin - 5, bottomBoxBottomY - 3, { align: 'right' });
 
   return doc;
 }

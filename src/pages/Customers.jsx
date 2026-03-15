@@ -58,10 +58,10 @@ export default function Customers() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gradient">Customers</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gradient">Customers</h1>
         <button onClick={() => setShowForm(!showForm)}
-          className={showForm ? 'btn-neon btn-glass' : 'btn-neon'}>
+          className={`${showForm ? 'btn-neon btn-glass' : 'btn-neon'} text-sm py-2 px-4`}>
           {showForm ? 'Cancel' : '+ Add Customer'}
         </button>
       </div>
@@ -81,8 +81,8 @@ export default function Customers() {
         </form>
       )}
 
-      <div className="glass-card overflow-hidden">
-        <table className="table-dark">
+      <div className="glass-card overflow-hidden overflow-x-auto">
+        <table className="table-dark min-w-[500px]">
           <thead>
             <tr>
               <th>Name</th>
@@ -100,12 +100,12 @@ export default function Customers() {
                 <td>{c.gstin}</td>
                 <td>{c.phone}</td>
                 <td>
-                  <button onClick={() => handleDelete(c.id)} className="text-sm" style={{ color: '#ff6b6b' }}>Delete</button>
+                  <button onClick={() => handleDelete(c.id)} className="text-sm" style={{ color: 'var(--danger-text)' }}>Delete</button>
                 </td>
               </tr>
             ))}
             {customers.length === 0 && (
-              <tr><td colSpan="5" className="text-center py-6" style={{ color: '#707070' }}>No customers yet</td></tr>
+              <tr><td colSpan="5" className="text-center py-6" style={{ color: 'var(--text-muted)' }}>No customers yet</td></tr>
             )}
           </tbody>
         </table>

@@ -76,16 +76,16 @@ export default function ViewInvoice() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div>
-          <Link to="/" style={{ color: '#00ccff' }} className="text-sm hover:opacity-70">&larr; Back to Dashboard</Link>
-          <h1 className="text-2xl font-bold text-gradient mt-1">Invoice #{invoice.invoiceNo}</h1>
+          <Link to="/" style={{ color: 'var(--accent)' }} className="text-sm hover:opacity-70">&larr; Back to Dashboard</Link>
+          <h1 className="text-xl sm:text-2xl font-bold text-gradient mt-1">Invoice #{invoice.invoiceNo}</h1>
         </div>
-        <div className="flex gap-3">
-          <button onClick={handleRegenerate} className="btn-neon btn-glass text-sm">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <button onClick={handleRegenerate} className="btn-neon btn-glass text-xs sm:text-sm py-2 px-3 sm:px-5">
             Refresh Preview
           </button>
-          <button onClick={handleDownload} className="btn-neon btn-cyan text-sm">
+          <button onClick={handleDownload} className="btn-neon btn-cyan text-xs sm:text-sm py-2 px-3 sm:px-5">
             Download PDF
           </button>
         </div>
@@ -95,7 +95,7 @@ export default function ViewInvoice() {
       {pdfUrl && (
         <div className="glass-card p-5 mb-6">
           <h2 className="text-sm font-bold text-gradient mb-3">Invoice PDF</h2>
-          <iframe src={pdfUrl} className="w-full rounded-xl" style={{ height: '85vh', border: '1px solid rgba(255,255,255,0.1)' }} title="Invoice PDF Preview" />
+          <iframe src={pdfUrl} className="w-full rounded-xl" style={{ height: '85vh', border: '1px solid var(--border-color)' }} title="Invoice PDF Preview" />
         </div>
       )}
 
@@ -104,7 +104,7 @@ export default function ViewInvoice() {
         <h2 className="text-sm font-bold text-gradient mb-4">Invoice Details</h2>
 
         {/* Header */}
-        <div className="text-center pb-5 mb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <div className="text-center pb-5 mb-5" style={{ borderBottom: '1px solid var(--border-color)' }}>
           <p className="text-xs text-gray-500">TAX INVOICE</p>
           <h2 className="text-xl font-bold text-gradient">{company.name}</h2>
           <p className="text-sm text-gray-400">{company.address}</p>
@@ -114,16 +114,16 @@ export default function ViewInvoice() {
         </div>
 
         {/* Invoice info */}
-        <div className="flex justify-between pb-4 mb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <div><span className="font-semibold text-sm text-gray-300">INV No:</span> <span className="text-sm" style={{ color: '#00ffcc' }}>{invoice.invoiceNo}</span></div>
+        <div className="flex justify-between pb-4 mb-5" style={{ borderBottom: '1px solid var(--border-color)' }}>
+          <div><span className="font-semibold text-sm text-gray-300">INV No:</span> <span className="text-sm" style={{ color: 'var(--accent)' }}>{invoice.invoiceNo}</span></div>
           <div className="font-semibold text-sm text-gray-300">{invoice.billType}</div>
           <div><span className="font-semibold text-sm text-gray-300">Date:</span> <span className="text-sm text-gray-400">{invoice.date}</span></div>
         </div>
 
         {/* Customer + Transport */}
-        <div className="grid grid-cols-2 gap-6 pb-5 mb-5 text-sm" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <div className="grid grid-cols-2 gap-6 pb-5 mb-5 text-sm" style={{ borderBottom: '1px solid var(--border-color)' }}>
           <div>
-            <p className="font-bold italic" style={{ color: '#00ffcc' }}>{invoice.customer?.name}</p>
+            <p className="font-bold italic" style={{ color: 'var(--accent)' }}>{invoice.customer?.name}</p>
             <p className="text-gray-400">{invoice.customer?.address}</p>
             <p className="text-gray-400">{invoice.customer?.city} - {invoice.customer?.pincode}</p>
             <p className="text-gray-400">GSTIN: {invoice.customer?.gstin}</p>
@@ -138,9 +138,9 @@ export default function ViewInvoice() {
         </div>
 
         {/* Totals */}
-        <div className="grid grid-cols-2 gap-8 pt-5" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        <div className="grid grid-cols-2 gap-8 pt-5" style={{ borderTop: '1px solid var(--border-color)' }}>
           <div className="text-sm space-y-2">
-            <p className="italic text-xs" style={{ color: '#707070' }}>{invoice.amountInWords}</p>
+            <p className="italic text-xs" style={{ color: 'var(--text-muted)' }}>{invoice.amountInWords}</p>
           </div>
           <div className="text-sm space-y-2">
             <div className="flex justify-between"><span className="text-gray-400">Sub Total:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.subTotal)}</span></div>
@@ -150,8 +150,8 @@ export default function ViewInvoice() {
             <div className="flex justify-between"><span className="text-gray-400">IGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.igstAmount)}</span></div>
             <div className="flex justify-between"><span className="text-gray-400">Freight:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.freight)}</span></div>
             <div className="flex justify-between"><span className="text-gray-400">Round Off:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.roundOff)}</span></div>
-            <div className="flex justify-between text-lg font-bold pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <span className="text-white">GRAND TOTAL:</span><span style={{ color: '#00ffcc' }}>{'\u20B9'}{safeFixed(invoice.grandTotal)}</span>
+            <div className="flex justify-between text-lg font-bold pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+              <span className="text-white">GRAND TOTAL:</span><span style={{ color: 'var(--success-text)' }}>{'\u20B9'}{safeFixed(invoice.grandTotal)}</span>
             </div>
           </div>
         </div>

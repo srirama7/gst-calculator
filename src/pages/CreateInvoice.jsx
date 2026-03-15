@@ -205,17 +205,17 @@ export default function CreateInvoice() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gradient">Create Invoice</h1>
-        <div className="flex gap-3">
-          <button onClick={handlePreviewPDF} className="btn-neon btn-glass text-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gradient">Create Invoice</h1>
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <button onClick={handlePreviewPDF} className="btn-neon btn-glass text-xs sm:text-sm py-2 px-3 sm:px-5">
             Preview PDF
           </button>
-          <button onClick={handleDownloadPDF} className="btn-neon btn-cyan text-sm">
+          <button onClick={handleDownloadPDF} className="btn-neon btn-cyan text-xs sm:text-sm py-2 px-3 sm:px-5">
             Download PDF
           </button>
           <button onClick={handleSave} disabled={saving}
-            className="btn-neon text-sm disabled:opacity-50">
+            className="btn-neon text-xs sm:text-sm py-2 px-3 sm:px-5 disabled:opacity-50">
             {saving ? 'Saving...' : 'Save Invoice'}
           </button>
         </div>
@@ -342,54 +342,84 @@ export default function CreateInvoice() {
           <h2 className="text-sm font-bold text-gradient">Items</h2>
           <button onClick={addItem} className="btn-neon btn-success text-xs py-1.5 px-4">+ Add Item</button>
         </div>
-        <table className="min-w-full text-xs">
-          <thead>
-            <tr style={{ background: 'rgba(255,255,255,0.05)' }}>
-              {['Sl','Mfr','Particulars','HSN','Pack','Qty','Free','Batch No','Exp','MRP','Rate','Disc%','GST%','GST Mode','Amount',''].map(h => (
-                <th key={h} className="px-1 py-2 text-left text-gray-400 font-medium">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <td className="px-1 py-1 text-center text-gray-400">{i + 1}</td>
-                <td><input type="text" value={item.mfr} onChange={e => updateItem(i, 'mfr', e.target.value)} className={`${inputSmall} w-14`} /></td>
-                <td><input type="text" value={item.particulars} onChange={e => updateItem(i, 'particulars', e.target.value)} className={`${inputSmall} w-36`} /></td>
-                <td><input type="text" value={item.hsn} onChange={e => updateItem(i, 'hsn', e.target.value)} className={`${inputSmall} w-14`} /></td>
-                <td><input type="text" value={item.pack} onChange={e => updateItem(i, 'pack', e.target.value)} className={`${inputSmall} w-14`} /></td>
-                <td><input type="number" value={item.qty} onChange={e => updateItem(i, 'qty', e.target.value)} className={`${inputSmall} w-12`} /></td>
-                <td><input type="number" value={item.free} onChange={e => updateItem(i, 'free', e.target.value)} className={`${inputSmall} w-10`} /></td>
-                <td><input type="text" value={item.batchNo} onChange={e => updateItem(i, 'batchNo', e.target.value)} className={`${inputSmall} w-16`} /></td>
-                <td><input type="text" value={item.exp} onChange={e => updateItem(i, 'exp', e.target.value)} className={`${inputSmall} w-14`} placeholder="MM/YY" /></td>
-                <td><input type="number" step="0.01" value={item.mrp} onChange={e => updateItem(i, 'mrp', e.target.value)} className={`${inputSmall} w-16`} /></td>
-                <td><input type="number" step="0.01" value={item.rate} onChange={e => updateItem(i, 'rate', e.target.value)} className={`${inputSmall} w-14`} /></td>
-                <td><input type="number" step="0.01" value={item.discount} onChange={e => updateItem(i, 'discount', e.target.value)} className={`${inputSmall} w-12`} /></td>
-                <td>
-                  <select value={item.gstPercent} onChange={e => updateItem(i, 'gstPercent', parseFloat(e.target.value))} className={`${inputSmall} w-14`}>
+        <div className="space-y-4">
+          {items.map((item, i) => (
+            <div key={i} className="p-4 rounded-lg" style={{ background: 'var(--item-card-bg)', border: '1px solid var(--item-card-border)' }}>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-bold text-gray-400">Item {i + 1}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold" style={{ color: 'var(--success-text)' }}>{'\u20B9'}{(item.amount || 0).toFixed(2)}</span>
+                  {items.length > 1 && (
+                    <button onClick={() => removeItem(i)} style={{ color: 'var(--danger-text)' }} className="text-xs px-2 py-1 hover:opacity-70 rounded" title="Remove item">x</button>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Mfr</label>
+                  <input type="text" value={item.mfr} onChange={e => updateItem(i, 'mfr', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-500 mb-1 block">Particulars</label>
+                  <input type="text" value={item.particulars} onChange={e => updateItem(i, 'particulars', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">HSN</label>
+                  <input type="text" value={item.hsn} onChange={e => updateItem(i, 'hsn', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Pack</label>
+                  <input type="text" value={item.pack} onChange={e => updateItem(i, 'pack', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Qty</label>
+                  <input type="number" value={item.qty} onChange={e => updateItem(i, 'qty', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Free</label>
+                  <input type="number" value={item.free} onChange={e => updateItem(i, 'free', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Batch No</label>
+                  <input type="text" value={item.batchNo} onChange={e => updateItem(i, 'batchNo', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Exp</label>
+                  <input type="text" value={item.exp} onChange={e => updateItem(i, 'exp', e.target.value)} className={`${inputSmall} w-full`} placeholder="MM/YY" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">MRP</label>
+                  <input type="number" step="0.01" value={item.mrp} onChange={e => updateItem(i, 'mrp', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Rate</label>
+                  <input type="number" step="0.01" value={item.rate} onChange={e => updateItem(i, 'rate', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Disc%</label>
+                  <input type="number" step="0.01" value={item.discount} onChange={e => updateItem(i, 'discount', e.target.value)} className={`${inputSmall} w-full`} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">GST%</label>
+                  <select value={item.gstPercent} onChange={e => updateItem(i, 'gstPercent', parseFloat(e.target.value))} className={`${inputSmall} w-full`}>
                     <option value={0}>0%</option>
                     <option value={5}>5%</option>
                     <option value={12}>12%</option>
                     <option value={18}>18%</option>
                     <option value={28}>28%</option>
                   </select>
-                </td>
-                <td>
-                  <select value={item.gstMode || 'exclude'} onChange={e => updateItem(i, 'gstMode', e.target.value)} className={`${inputSmall} w-20`}>
-                    <option value="exclude">Excl.</option>
-                    <option value="include">Incl.</option>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">GST Mode</label>
+                  <select value={item.gstMode || 'exclude'} onChange={e => updateItem(i, 'gstMode', e.target.value)} className={`${inputSmall} w-full`}>
+                    <option value="exclude">Exclude</option>
+                    <option value="include">Include</option>
                   </select>
-                </td>
-                <td className="px-1 py-1 text-right font-medium" style={{ color: '#00ffcc' }}>{'\u20B9'}{(item.amount || 0).toFixed(2)}</td>
-                <td>
-                  {items.length > 1 && (
-                    <button onClick={() => removeItem(i)} style={{ color: '#ff6b6b' }} className="px-1 hover:opacity-70">x</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Totals */}
@@ -409,13 +439,13 @@ export default function CreateInvoice() {
           </div>
           <div className="space-y-3">
             <div className="flex justify-between text-sm"><span className="text-gray-400">Round Off:</span><span className="font-medium text-white">{'\u20B9'}{roundOff.toFixed(2)}</span></div>
-            <div className="flex justify-between text-lg pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="flex justify-between text-lg pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
               <span className="font-bold text-white">GRAND TOTAL:</span>
-              <span className="font-bold" style={{ color: '#00ffcc' }}>{'\u20B9'}{grandTotal.toFixed(2)}</span>
+              <span className="font-bold" style={{ color: 'var(--success-text)' }}>{'\u20B9'}{grandTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>
-        <p className="text-xs mt-3 italic" style={{ color: '#707070' }}>{numberToWords(grandTotal)}</p>
+        <p className="text-xs mt-3 italic" style={{ color: 'var(--text-muted)' }}>{numberToWords(grandTotal)}</p>
       </div>
 
       {/* Terms */}
@@ -432,9 +462,9 @@ export default function CreateInvoice() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-sm font-bold text-gradient">PDF Preview</h2>
             <button onClick={() => { URL.revokeObjectURL(pdfPreviewUrl); setPdfPreviewUrl(null); }}
-              style={{ color: '#ff6b6b' }} className="text-sm hover:opacity-70">Close Preview</button>
+              style={{ color: 'var(--danger-text)' }} className="text-sm hover:opacity-70">Close Preview</button>
           </div>
-          <iframe src={pdfPreviewUrl} className="w-full rounded-xl" style={{ height: '80vh', border: '1px solid rgba(255,255,255,0.1)' }} title="Invoice PDF Preview" />
+          <iframe src={pdfPreviewUrl} className="w-full rounded-xl" style={{ height: '80vh', border: '1px solid var(--border-color)' }} title="Invoice PDF Preview" />
         </div>
       )}
     </div>
