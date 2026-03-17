@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { db } from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import { generateInvoicePDF } from '../utils/generatePDF'
+import { downloadPdf, getPdfPreviewUrl, isNativePlatform, savePdfToDevice, sharePdf } from '../utils/mobilePdf'
 import toast from 'react-hot-toast'
 
 function safeFixed(val, digits = 2) {
@@ -34,12 +35,12 @@ export default function ViewInvoice() {
       setInvoice(inv);
       setCompany(comp);
 
-      // Auto-generate PDF preview
+      // Auto-generate PDF preview (web only; mobile WebView can't render PDFs in iframe)
       if (inv) {
         try {
           const pdfDoc = generateInvoicePDF(inv, comp);
-          const blob = pdfDoc.output('blob');
-          setPdfUrl(URL.createObjectURL(blob));
+          const url = getPdfPreviewUrl(pdfDoc);
+          setPdfUrl(url);
         } catch (e) {
           console.error('PDF generation failed:', e);
         }
@@ -50,22 +51,30 @@ export default function ViewInvoice() {
     setLoading(false);
   }
 
-  function handleDownload() {
+  async function handleDownload() {
     try {
       const pdfDoc = generateInvoicePDF(invoice, company);
-      pdfDoc.save(`Invoice_${invoice.invoiceNo || 'draft'}.pdf`);
+      const filename = `Invoice_${invoice.invoiceNo || 'draft'}.pdf`;
+      await downloadPdf(pdfDoc, filename);
       toast.success('PDF downloaded!');
     } catch (e) {
       toast.error('PDF download failed: ' + e.message);
     }
   }
 
-  function handleRegenerate() {
+  async function handleRegenerate() {
     try {
       const pdfDoc = generateInvoicePDF(invoice, company);
-      const blob = pdfDoc.output('blob');
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-      setPdfUrl(URL.createObjectURL(blob));
+      if (isNativePlatform()) {
+        // On mobile, open externally since WebView can't render PDFs
+        const filename = `Invoice_${invoice.invoiceNo || 'draft'}.pdf`;
+        const uri = await savePdfToDevice(pdfDoc, filename);
+        await sharePdf(uri, filename);
+      } else {
+        const blob = pdfDoc.output('blob');
+        if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+        setPdfUrl(URL.createObjectURL(blob));
+      }
     } catch (e) {
       toast.error('PDF preview failed: ' + e.message);
     }
@@ -76,31 +85,43 @@ export default function ViewInvoice() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <Link to="/" style={{ color: 'var(--accent)' }} className="text-sm hover:opacity-70">&larr; Back to Dashboard</Link>
-          <h1 className="text-xl sm:text-2xl font-bold text-gradient mt-1">Invoice #{invoice.invoiceNo}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gradient mt-2">Invoice #{invoice.invoiceNo}</h1>
         </div>
-        <div className="flex flex-wrap gap-2 sm:gap-3">
-          <button onClick={handleRegenerate} className="btn-neon btn-glass text-xs sm:text-sm py-2 px-3 sm:px-5">
+        <div className="flex flex-wrap gap-4">
+          <button onClick={handleRegenerate} className="btn-neon btn-glass text-xs sm:text-sm py-2.5 px-4 sm:px-6">
             Refresh Preview
           </button>
-          <button onClick={handleDownload} className="btn-neon btn-cyan text-xs sm:text-sm py-2 px-3 sm:px-5">
+          <button onClick={handleDownload} className="btn-neon btn-cyan text-xs sm:text-sm py-2.5 px-4 sm:px-6">
             Download PDF
           </button>
         </div>
       </div>
 
-      {/* PDF Preview - shown by default */}
-      {pdfUrl && (
-        <div className="glass-card p-5 mb-6">
-          <h2 className="text-sm font-bold text-gradient mb-3">Invoice PDF</h2>
+      {/* PDF Preview - iframe on web, message on mobile */}
+      {pdfUrl ? (
+        <div className="glass-card p-6 sm:p-8 mb-8">
+          <h2 className="text-sm font-bold text-gradient mb-4">Invoice PDF</h2>
           <iframe src={pdfUrl} className="w-full rounded-xl" style={{ height: '85vh', border: '1px solid var(--border-color)' }} title="Invoice PDF Preview" />
+        </div>
+      ) : isNativePlatform() && (
+        <div className="glass-card p-6 sm:p-8 mb-8 text-center">
+          <p className="text-gray-400 text-sm mb-4">PDF preview is not available in the app. Use the buttons below to view or download.</p>
+          <div className="flex justify-center gap-4">
+            <button onClick={handleRegenerate} className="btn-neon btn-glass text-xs sm:text-sm py-2.5 px-4 sm:px-6">
+              View PDF
+            </button>
+            <button onClick={handleDownload} className="btn-neon btn-cyan text-xs sm:text-sm py-2.5 px-4 sm:px-6">
+              Download PDF
+            </button>
+          </div>
         </div>
       )}
 
       {/* Invoice Details Summary */}
-      <div className="glass-card p-6">
+      <div className="glass-card p-6 sm:p-8">
         <h2 className="text-sm font-bold text-gradient mb-4">Invoice Details</h2>
 
         {/* Header */}

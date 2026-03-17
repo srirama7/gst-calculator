@@ -58,17 +58,17 @@ export default function Customers() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
         <h1 className="text-2xl sm:text-3xl font-bold text-gradient">Customers</h1>
         <button onClick={() => setShowForm(!showForm)}
-          className={`${showForm ? 'btn-neon btn-glass' : 'btn-neon'} text-sm py-2 px-4`}>
+          className={`${showForm ? 'btn-neon btn-glass' : 'btn-neon'} text-sm py-2.5 px-6`}>
           {showForm ? 'Cancel' : '+ Add Customer'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleAdd} className="glass-card p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form onSubmit={handleAdd} className="glass-card p-6 sm:p-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {Object.keys(emptyCustomer).map(field => (
               <div key={field}>
                 <label className="label-dark capitalize">{field.replace(/([A-Z])/g, ' $1')}</label>
@@ -77,7 +77,7 @@ export default function Customers() {
               </div>
             ))}
           </div>
-          <button type="submit" className="btn-neon btn-success mt-5">Save Customer</button>
+          <button type="submit" className="btn-neon btn-success mt-8 py-2.5 px-6">Save Customer</button>
         </form>
       )}
 

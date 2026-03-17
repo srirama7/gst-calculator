@@ -46,9 +46,9 @@ export default function Settings() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-gradient mb-8">Company Settings</h1>
-      <form onSubmit={handleSave} className="glass-card p-8 space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <h1 className="text-3xl font-bold text-gradient mb-10">Company Settings</h1>
+      <form onSubmit={handleSave} className="glass-card p-8 sm:p-10 space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
           <div>
             <label className="label-dark">Company Name</label>
             <input type="text" value={company.name} onChange={e => update('name', e.target.value)}
@@ -90,7 +90,7 @@ export default function Settings() {
               className="input-dark" />
           </div>
         </div>
-        <button type="submit" className="btn-neon w-full text-center">
+        <button type="submit" className="btn-neon w-full text-center py-3">
           Save Company Details
         </button>
       </form>

@@ -4,6 +4,7 @@ import { db } from '../firebase'
 import { collection, addDoc, getDocs, doc, getDoc, query, orderBy, limit, serverTimestamp } from 'firebase/firestore'
 import { numberToWords } from '../utils/numberToWords'
 import { generateInvoicePDF } from '../utils/generatePDF'
+import { downloadPdf, getPdfPreviewUrl, isNativePlatform, savePdfToDevice, sharePdf } from '../utils/mobilePdf'
 import toast from 'react-hot-toast'
 
 const emptyItem = {
@@ -148,24 +149,31 @@ export default function CreateInvoice() {
     };
   }
 
-  function handlePreviewPDF() {
+  async function handlePreviewPDF() {
     try {
       const data = buildInvoiceData();
       const pdfDoc = generateInvoicePDF(data, company);
-      const blob = pdfDoc.output('blob');
-      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
-      const url = URL.createObjectURL(blob);
-      setPdfPreviewUrl(url);
+      if (isNativePlatform()) {
+        // On mobile, open externally since WebView can't render PDFs in iframe
+        const filename = `Invoice_${invoice.invoiceNo || 'draft'}.pdf`;
+        const uri = await savePdfToDevice(pdfDoc, filename);
+        await sharePdf(uri, filename);
+      } else {
+        if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+        const url = getPdfPreviewUrl(pdfDoc);
+        setPdfPreviewUrl(url);
+      }
     } catch (e) {
       toast.error('PDF preview failed: ' + e.message);
     }
   }
 
-  function handleDownloadPDF() {
+  async function handleDownloadPDF() {
     try {
       const data = buildInvoiceData();
       const pdfDoc = generateInvoicePDF(data, company);
-      pdfDoc.save(`Invoice_${invoice.invoiceNo || 'draft'}.pdf`);
+      const filename = `Invoice_${invoice.invoiceNo || 'draft'}.pdf`;
+      await downloadPdf(pdfDoc, filename);
       toast.success('PDF downloaded!');
     } catch (e) {
       toast.error('PDF download failed: ' + e.message);
@@ -205,25 +213,25 @@ export default function CreateInvoice() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gradient">Create Invoice</h1>
-        <div className="flex flex-wrap gap-2 sm:gap-3">
-          <button onClick={handlePreviewPDF} className="btn-neon btn-glass text-xs sm:text-sm py-2 px-3 sm:px-5">
-            Preview PDF
+        <div className="flex flex-wrap gap-4">
+          <button onClick={handlePreviewPDF} className="btn-neon btn-glass text-xs sm:text-sm py-2.5 px-4 sm:px-6">
+            {isNativePlatform() ? 'View PDF' : 'Preview PDF'}
           </button>
-          <button onClick={handleDownloadPDF} className="btn-neon btn-cyan text-xs sm:text-sm py-2 px-3 sm:px-5">
+          <button onClick={handleDownloadPDF} className="btn-neon btn-cyan text-xs sm:text-sm py-2.5 px-4 sm:px-6">
             Download PDF
           </button>
           <button onClick={handleSave} disabled={saving}
-            className="btn-neon text-xs sm:text-sm py-2 px-3 sm:px-5 disabled:opacity-50">
+            className="btn-neon text-xs sm:text-sm py-2.5 px-4 sm:px-6 disabled:opacity-50">
             {saving ? 'Saving...' : 'Save Invoice'}
           </button>
         </div>
       </div>
 
       {/* Invoice Header */}
-      <div className="glass-card p-5 mb-5">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="glass-card p-6 sm:p-8 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <label className="label-dark">Invoice No.</label>
             <input type="number" value={invoice.invoiceNo}
@@ -255,9 +263,9 @@ export default function CreateInvoice() {
       </div>
 
       {/* Customer + Transport */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        <div className="glass-card p-5">
-          <div className="flex justify-between items-center mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="glass-card p-6 sm:p-8">
+          <div className="flex justify-between items-center mb-6">
             <h2 className="text-sm font-bold text-gradient">Customer Details</h2>
             <select onChange={e => selectCustomer(e.target.value)}
               className="input-dark text-xs py-1.5 w-auto">
@@ -265,12 +273,12 @@ export default function CreateInvoice() {
               {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="sm:col-span-2">
               <label className="label-dark">Name</label>
               <input type="text" value={invoice.customer.name} onChange={e => updateCustomer('name', e.target.value)} className="input-dark" />
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <label className="label-dark">Address</label>
               <input type="text" value={invoice.customer.address} onChange={e => updateCustomer('address', e.target.value)} className="input-dark" />
             </div>
@@ -301,10 +309,10 @@ export default function CreateInvoice() {
           </div>
         </div>
 
-        <div className="glass-card p-5">
-          <h2 className="text-sm font-bold text-gradient mb-4">Transport Details</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+        <div className="glass-card p-6 sm:p-8">
+          <h2 className="text-sm font-bold text-gradient mb-6">Transport Details</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="sm:col-span-2">
               <label className="label-dark">Transport Name</label>
               <input type="text" value={invoice.transport.name} onChange={e => updateTransport('name', e.target.value)} className="input-dark" />
             </div>
@@ -326,7 +334,7 @@ export default function CreateInvoice() {
             </div>
           </div>
 
-          <h2 className="text-sm font-bold text-gradient mt-5 mb-3">Additional</h2>
+          <h2 className="text-sm font-bold text-gradient mt-8 mb-4">Additional</h2>
           <div>
             <label className="label-dark">Freight</label>
             <input type="number" step="0.01" value={invoice.freight}
@@ -337,70 +345,70 @@ export default function CreateInvoice() {
       </div>
 
       {/* Items Table */}
-      <div className="glass-card p-5 mb-5 overflow-x-auto">
-        <div className="flex justify-between items-center mb-4">
+      <div className="glass-card p-6 sm:p-8 mb-8 overflow-x-auto">
+        <div className="flex justify-between items-center mb-6">
           <h2 className="text-sm font-bold text-gradient">Items</h2>
-          <button onClick={addItem} className="btn-neon btn-success text-xs py-1.5 px-4">+ Add Item</button>
+          <button onClick={addItem} className="btn-neon btn-success text-xs py-2 px-5">+ Add Item</button>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-6">
           {items.map((item, i) => (
-            <div key={i} className="p-4 rounded-lg" style={{ background: 'var(--item-card-bg)', border: '1px solid var(--item-card-border)' }}>
-              <div className="flex justify-between items-center mb-3">
+            <div key={i} className="p-5 sm:p-6 rounded-lg" style={{ background: 'var(--item-card-bg)', border: '1px solid var(--item-card-border)' }}>
+              <div className="flex justify-between items-center mb-5">
                 <span className="text-xs font-bold text-gray-400">Item {i + 1}</span>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <span className="text-sm font-bold" style={{ color: 'var(--success-text)' }}>{'\u20B9'}{(item.amount || 0).toFixed(2)}</span>
                   {items.length > 1 && (
                     <button onClick={() => removeItem(i)} style={{ color: 'var(--danger-text)' }} className="text-xs px-2 py-1 hover:opacity-70 rounded" title="Remove item">x</button>
                   )}
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Mfr</label>
+                  <label className="text-xs text-gray-500 mb-2 block">Mfr</label>
                   <input type="text" value={item.mfr} onChange={e => updateItem(i, 'mfr', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
-                <div className="col-span-2">
-                  <label className="text-xs text-gray-500 mb-1 block">Particulars</label>
+                <div className="sm:col-span-2">
+                  <label className="text-xs text-gray-500 mb-2 block">Particulars</label>
                   <input type="text" value={item.particulars} onChange={e => updateItem(i, 'particulars', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">HSN</label>
+                  <label className="text-xs text-gray-500 mb-2 block">HSN</label>
                   <input type="text" value={item.hsn} onChange={e => updateItem(i, 'hsn', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Pack</label>
+                  <label className="text-xs text-gray-500 mb-2 block">Pack</label>
                   <input type="text" value={item.pack} onChange={e => updateItem(i, 'pack', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Qty</label>
+                  <label className="text-xs text-gray-500 mb-2 block">Qty</label>
                   <input type="number" value={item.qty} onChange={e => updateItem(i, 'qty', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Free</label>
+                  <label className="text-xs text-gray-500 mb-2 block">Free</label>
                   <input type="number" value={item.free} onChange={e => updateItem(i, 'free', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Batch No</label>
+                  <label className="text-xs text-gray-500 mb-2 block">Batch No</label>
                   <input type="text" value={item.batchNo} onChange={e => updateItem(i, 'batchNo', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Exp</label>
+                  <label className="text-xs text-gray-500 mb-2 block">Exp</label>
                   <input type="text" value={item.exp} onChange={e => updateItem(i, 'exp', e.target.value)} className={`${inputSmall} w-full`} placeholder="MM/YY" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">MRP</label>
+                  <label className="text-xs text-gray-500 mb-2 block">MRP</label>
                   <input type="number" step="0.01" value={item.mrp} onChange={e => updateItem(i, 'mrp', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Rate</label>
+                  <label className="text-xs text-gray-500 mb-2 block">Rate</label>
                   <input type="number" step="0.01" value={item.rate} onChange={e => updateItem(i, 'rate', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Disc%</label>
+                  <label className="text-xs text-gray-500 mb-2 block">Disc%</label>
                   <input type="number" step="0.01" value={item.discount} onChange={e => updateItem(i, 'discount', e.target.value)} className={`${inputSmall} w-full`} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">GST%</label>
+                  <label className="text-xs text-gray-500 mb-2 block">GST%</label>
                   <select value={item.gstPercent} onChange={e => updateItem(i, 'gstPercent', parseFloat(e.target.value))} className={`${inputSmall} w-full`}>
                     <option value={0}>0%</option>
                     <option value={5}>5%</option>
@@ -410,7 +418,7 @@ export default function CreateInvoice() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">GST Mode</label>
+                  <label className="text-xs text-gray-500 mb-2 block">GST Mode</label>
                   <select value={item.gstMode || 'exclude'} onChange={e => updateItem(i, 'gstMode', e.target.value)} className={`${inputSmall} w-full`}>
                     <option value="exclude">Exclude</option>
                     <option value="include">Include</option>
@@ -423,43 +431,43 @@ export default function CreateInvoice() {
       </div>
 
       {/* Totals */}
-      <div className="glass-card p-5 mb-5">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="space-y-3">
+      <div className="glass-card p-6 sm:p-8 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="space-y-4">
             <div className="flex justify-between text-sm"><span className="text-gray-400">Sub Total:</span><span className="font-medium text-white">{'\u20B9'}{subTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-sm"><span className="text-gray-400">Discount:</span><span className="font-medium text-white">{'\u20B9'}{totalDiscount.toFixed(2)}</span></div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex justify-between text-sm"><span className="text-gray-400">CGST:</span><span className="font-medium text-white">{'\u20B9'}{cgstAmount.toFixed(2)}</span></div>
             <div className="flex justify-between text-sm"><span className="text-gray-400">SGST:</span><span className="font-medium text-white">{'\u20B9'}{sgstAmount.toFixed(2)}</span></div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex justify-between text-sm"><span className="text-gray-400">IGST:</span><span className="font-medium text-white">{'\u20B9'}{igstAmount.toFixed(2)}</span></div>
             <div className="flex justify-between text-sm"><span className="text-gray-400">Freight:</span><span className="font-medium text-white">{'\u20B9'}{freight.toFixed(2)}</span></div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex justify-between text-sm"><span className="text-gray-400">Round Off:</span><span className="font-medium text-white">{'\u20B9'}{roundOff.toFixed(2)}</span></div>
-            <div className="flex justify-between text-lg pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+            <div className="flex justify-between text-lg pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
               <span className="font-bold text-white">GRAND TOTAL:</span>
               <span className="font-bold" style={{ color: 'var(--success-text)' }}>{'\u20B9'}{grandTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>
-        <p className="text-xs mt-3 italic" style={{ color: 'var(--text-muted)' }}>{numberToWords(grandTotal)}</p>
+        <p className="text-xs mt-4 italic" style={{ color: 'var(--text-muted)' }}>{numberToWords(grandTotal)}</p>
       </div>
 
       {/* Terms */}
-      <div className="glass-card p-5 mb-5">
+      <div className="glass-card p-6 sm:p-8 mb-8">
         <label className="label-dark">Terms & Conditions</label>
         <textarea value={invoice.terms}
           onChange={e => setInvoice(prev => ({ ...prev, terms: e.target.value }))}
-          rows={4} className="input-dark mt-1" />
+          rows={4} className="input-dark mt-2" />
       </div>
 
       {/* PDF Preview */}
       {pdfPreviewUrl && (
-        <div className="glass-card p-5 mb-5">
-          <div className="flex justify-between items-center mb-4">
+        <div className="glass-card p-6 sm:p-8 mb-8">
+          <div className="flex justify-between items-center mb-5">
             <h2 className="text-sm font-bold text-gradient">PDF Preview</h2>
             <button onClick={() => { URL.revokeObjectURL(pdfPreviewUrl); setPdfPreviewUrl(null); }}
               style={{ color: 'var(--danger-text)' }} className="text-sm hover:opacity-70">Close Preview</button>

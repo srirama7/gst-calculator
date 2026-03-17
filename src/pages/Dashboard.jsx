@@ -37,17 +37,17 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
         <h1 className="text-2xl sm:text-3xl font-bold text-gradient">Dashboard</h1>
-        <Link to="/invoice/new" className="btn-neon text-sm py-2 px-4">
+        <Link to="/invoice/new" className="btn-neon text-sm py-2.5 px-6">
           + New Invoice
         </Link>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="glass-card glass-card-glow p-6">
-          <div className="flex items-center gap-3 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <div className="glass-card glass-card-glow p-7">
+          <div className="flex items-center gap-4 mb-5">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
               style={{ background: 'linear-gradient(135deg, #00ffcc, #00ccff)' }}>
               <span role="img">&#128202;</span>
@@ -55,10 +55,10 @@ export default function Dashboard() {
             <span className="text-sm text-gray-400">Total Invoices</span>
           </div>
           <p className="stat-neon">{stats.count}</p>
-          <p className="text-xs text-gray-500 mt-2">All time invoices created</p>
+          <p className="text-xs text-gray-500 mt-3">All time invoices created</p>
         </div>
-        <div className="glass-card glass-card-glow p-6">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="glass-card glass-card-glow p-7">
+          <div className="flex items-center gap-4 mb-5">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
               style={{ background: 'linear-gradient(135deg, #4ade80, #22c55e)' }}>
               <span role="img">&#128176;</span>
@@ -66,10 +66,10 @@ export default function Dashboard() {
             <span className="text-sm text-gray-400">Total Revenue</span>
           </div>
           <p className="stat-neon">{'\u20B9'}{stats.total.toFixed(2)}</p>
-          <p className="text-xs text-gray-500 mt-2">Cumulative revenue generated</p>
+          <p className="text-xs text-gray-500 mt-3">Cumulative revenue generated</p>
         </div>
-        <div className="glass-card glass-card-glow p-6">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="glass-card glass-card-glow p-7">
+          <div className="flex items-center gap-4 mb-5">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
               style={{ background: 'linear-gradient(135deg, #ff6b6b, #ff8e53)' }}>
               <span role="img">&#127919;</span>
@@ -77,13 +77,13 @@ export default function Dashboard() {
             <span className="text-sm text-gray-400">Total GST Collected</span>
           </div>
           <p className="stat-neon">{'\u20B9'}{stats.gst.toFixed(2)}</p>
-          <p className="text-xs text-gray-500 mt-2">CGST + SGST + IGST collected</p>
+          <p className="text-xs text-gray-500 mt-3">CGST + SGST + IGST collected</p>
         </div>
       </div>
 
       {/* Recent Invoices */}
       <div className="glass-card overflow-hidden">
-        <h2 className="px-4 sm:px-6 py-4 text-base sm:text-lg font-semibold text-gradient" style={{ borderBottom: '1px solid var(--border-color)' }}>
+        <h2 className="px-4 sm:px-6 py-5 text-base sm:text-lg font-semibold text-gradient" style={{ borderBottom: '1px solid var(--border-color)' }}>
           Recent Invoices
         </h2>
         <div className="overflow-x-auto">
