@@ -54,15 +54,15 @@ function App() {
         },
       }} />
       <div className="min-h-screen app-bg">
-        <nav className="sticky top-0 z-50 nav-bg">
+        <nav className="sticky top-0 z-50 nav-bg safe-top">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center justify-between h-12 sm:h-16">
               <Link to="/" className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center font-bold text-base sm:text-lg"
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center font-bold text-sm sm:text-lg"
                   style={{ background: 'linear-gradient(135deg, #00ffcc, #00ccff)', color: 'var(--logo-text)', boxShadow: '0 0 20px rgba(0,255,204,0.3)' }}>
-                  G
+                  GST
                 </div>
-                <span className="text-base sm:text-lg font-bold text-gradient">GST Invoice</span>
+                <span className="text-sm sm:text-lg font-bold text-gradient">GST Invoice</span>
               </Link>
               {/* Desktop nav links */}
               <div className="hidden sm:flex items-center gap-2">
