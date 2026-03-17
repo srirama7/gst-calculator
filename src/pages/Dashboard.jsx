@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../firebase'
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore'
 import toast from 'react-hot-toast'
 
 export default function Dashboard() {
@@ -31,6 +31,17 @@ export default function Dashboard() {
       toast.error('Failed to load invoices: ' + e.message);
     }
     setLoading(false);
+  }
+
+  async function handleDelete(id) {
+    if (!confirm('Delete this invoice?')) return;
+    try {
+      await deleteDoc(doc(db, 'invoices', id));
+      toast.success('Invoice deleted');
+      loadInvoices();
+    } catch (e) {
+      toast.error('Delete failed: ' + e.message);
+    }
   }
 
   if (loading) return <div className="text-center py-10 text-gray-400">Loading...</div>;
@@ -105,7 +116,10 @@ export default function Dashboard() {
                 <td>{inv.customer?.name || '-'}</td>
                 <td className="font-semibold" style={{ color: 'var(--success-text)' }}>{'\u20B9'}{inv.grandTotal?.toFixed(2)}</td>
                 <td>
-                  <Link to={`/invoice/${inv.id}`} className="text-sm" style={{ color: '#00ccff' }}>View</Link>
+                  <div className="flex items-center gap-3">
+                    <Link to={`/invoice/${inv.id}`} className="text-sm" style={{ color: '#00ccff' }}>View</Link>
+                    <button onClick={() => handleDelete(inv.id)} className="text-sm" style={{ color: 'var(--danger-text)' }}>Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}
