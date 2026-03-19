@@ -166,15 +166,15 @@ export default function ViewInvoice() {
           <div className="text-sm space-y-2">
             <p className="italic text-xs" style={{ color: 'var(--text-muted)' }}>{invoice.amountInWords}</p>
           </div>
-          <div className="text-sm space-y-2">
-            <div className="flex justify-between"><span className="text-gray-400">Sub Total:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.subTotal)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Discount:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.discount)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">CGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.cgstAmount)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">SGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.sgstAmount)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">IGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.igstAmount)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Freight:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.freight)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Round Off:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.roundOff)}</span></div>
-            <div className="flex justify-between text-lg font-bold pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+          <div className="space-y-3">
+            <div className="flex justify-between text-base font-bold"><span style={{ color: 'var(--text-secondary)' }}>Sub Total:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.subTotal)}</span></div>
+            <div className="flex justify-between text-base font-bold"><span style={{ color: 'var(--text-secondary)' }}>Discount:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.discount)}</span></div>
+            <div className="flex justify-between text-base font-bold"><span style={{ color: 'var(--text-secondary)' }}>CGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.cgstAmount)}</span></div>
+            <div className="flex justify-between text-base font-bold"><span style={{ color: 'var(--text-secondary)' }}>SGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.sgstAmount)}</span></div>
+            <div className="flex justify-between text-base font-bold"><span style={{ color: 'var(--text-secondary)' }}>IGST:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.igstAmount)}</span></div>
+            <div className="flex justify-between text-base font-bold"><span style={{ color: 'var(--text-secondary)' }}>Freight:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.freight)}</span></div>
+            <div className="flex justify-between text-base font-bold"><span style={{ color: 'var(--text-secondary)' }}>Round Off:</span><span className="text-white">{'\u20B9'}{safeFixed(invoice.roundOff)}</span></div>
+            <div className="flex justify-between text-xl font-bold pt-3" style={{ borderTop: '2px solid var(--border-color)' }}>
               <span className="text-white">GRAND TOTAL:</span><span style={{ color: 'var(--success-text)' }}>{'\u20B9'}{safeFixed(invoice.grandTotal)}</span>
             </div>
           </div>

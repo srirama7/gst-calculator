@@ -299,7 +299,7 @@ select.input-dark option {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 2px solid var(--border-color);
 }
 
 .table-dark td {
@@ -307,7 +307,6 @@ select.input-dark option {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
-  border-bottom: 1px solid var(--border-color);
 }
 
 .table-dark tbody tr {

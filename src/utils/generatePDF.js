@@ -150,18 +150,24 @@ export function generateInvoicePDF(invoice, company) {
     body: tableBody,
     theme: 'grid',
     styles: {
-      fontSize: 6.5,
-      cellPadding: 1,
+      fontSize: 8,
+      fontStyle: 'bold',
+      cellPadding: 1.5,
       lineColor: [0, 0, 0],
       lineWidth: 0.3,
       textColor: [0, 0, 0],
-      minCellHeight: 6
+      minCellHeight: 7
     },
     headStyles: {
-      fillColor: [255, 255, 255],
+      fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
       fontStyle: 'bold',
       halign: 'center',
+      lineColor: [0, 0, 0],
+      lineWidth: 0.3,
+      fontSize: 7.5
+    },
+    bodyStyles: {
       lineColor: [0, 0, 0],
       lineWidth: 0.3
     },
@@ -180,6 +186,23 @@ export function generateInvoicePDF(invoice, company) {
       11: { cellWidth: 17, halign: 'right' },
       12: { cellWidth: 10, halign: 'right' },
       13: { cellWidth: 12, halign: 'right' }
+    },
+    didDrawCell: function (data) {
+      // Remove horizontal lines between body rows - only keep vertical column borders
+      if (data.section === 'body') {
+        // White out the bottom border of each body cell (except last row)
+        if (data.row.index < tableBody.length - 1) {
+          doc.setDrawColor(255, 255, 255);
+          doc.setLineWidth(0.4);
+          doc.line(
+            data.cell.x + 0.2,
+            data.cell.y + data.cell.height,
+            data.cell.x + data.cell.width - 0.2,
+            data.cell.y + data.cell.height
+          );
+          doc.setDrawColor(0);
+        }
+      }
     },
     didDrawPage: function () {
       doc.setDrawColor(0);
@@ -243,7 +266,7 @@ export function generateInvoicePDF(invoice, company) {
   const taxTableWidth = summaryDividerX - margin;
 
   // Draw tax table header
-  doc.setFontSize(5.5);
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   let txX = taxTableLeftX;
   const taxHeaderY = y;
@@ -255,8 +278,8 @@ export function generateInvoicePDF(invoice, company) {
   doc.line(margin, y, summaryDividerX, y);
 
   // Draw tax data rows
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(5.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
   taxKeys.forEach(gst => {
     txX = taxTableLeftX;
     const row = [
@@ -284,8 +307,8 @@ export function generateInvoicePDF(invoice, company) {
   const valX = pageWidth - margin - 3;
   let sy = bottomSectionStartY + 1;
 
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
 
   const totalItems = items.reduce((sum, i) => sum + n(i.qty), 0);
 
@@ -301,23 +324,23 @@ export function generateInvoicePDF(invoice, company) {
     doc.text(left, labelX, sy + 4);
     doc.text(label, summaryLabelX, sy + 4);
     doc.text(value, valX, sy + 4, { align: 'right' });
-    sy += 5;
+    sy += 5.5;
   });
 
   // Freight + Round Off on same row area
   doc.text(`Freight    ${n(invoice.freight).toFixed(2)}`, labelX, sy + 4);
   doc.text('Round Off', summaryLabelX, sy + 4);
   doc.text(n(invoice.roundOff).toFixed(2), valX, sy + 4, { align: 'right' });
-  sy += 6;
+  sy += 7;
 
   // Grand Total line
   doc.setLineWidth(0.4);
   doc.line(summaryDividerX, sy, pageWidth - margin, sy);
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('GRAND TOTAL :', summaryLabelX - 2, sy + 5);
-  doc.text(n(invoice.grandTotal).toFixed(2), valX, sy + 5, { align: 'right' });
-  sy += 8;
+  doc.text('GRAND TOTAL :', summaryLabelX - 2, sy + 5.5);
+  doc.text(n(invoice.grandTotal).toFixed(2), valX, sy + 5.5, { align: 'right' });
+  sy += 9;
 
   // Vertical divider between left tax table and right summary
   doc.setLineWidth(0.3);
