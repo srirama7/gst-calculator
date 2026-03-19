@@ -19,6 +19,7 @@ export default function EditInvoice() {
   const navigate = useNavigate();
   const [company, setCompany] = useState({});
   const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -41,14 +42,16 @@ export default function EditInvoice() {
 
   async function loadAll() {
     try {
-      const [invSnap, compSnap, custSnap] = await Promise.all([
+      const [invSnap, compSnap, custSnap, prodSnap] = await Promise.all([
         getDoc(doc(db, 'invoices', id)),
         getDoc(doc(db, 'companies', 'default')),
-        getDocs(collection(db, 'customers'))
+        getDocs(collection(db, 'customers')),
+        getDocs(collection(db, 'products'))
       ]);
 
       if (compSnap.exists()) setCompany(compSnap.data());
       setCustomers(custSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setProducts(prodSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
       if (invSnap.exists()) {
         const data = invSnap.data();
@@ -83,6 +86,39 @@ export default function EditInvoice() {
       toast.error('Failed to load invoice: ' + e.message);
     }
     setLoading(false);
+  }
+
+  function selectProduct(index, prodId) {
+    const p = products.find(x => x.id === prodId);
+    if (p) {
+      setInvoice(prev => {
+        const items = [...prev.items];
+        items[index] = {
+          ...items[index],
+          mfr: p.mfr || '',
+          particulars: p.name || '',
+          hsn: p.hsn || '',
+          pack: p.pack || '',
+          mrp: parseFloat(p.mrp) || 0,
+          rate: parseFloat(p.rate) || 0,
+          gstPercent: parseFloat(p.gstPercent) || 18
+        };
+        const qty = parseFloat(items[index].qty) || 0;
+        const rate = parseFloat(items[index].rate) || 0;
+        const disc = parseFloat(items[index].discount) || 0;
+        const gstPercent = parseFloat(items[index].gstPercent) || 0;
+        const gstMode = items[index].gstMode || 'exclude';
+        if (gstMode === 'include') {
+          const baseRate = rate / (1 + gstPercent / 100);
+          const subtotal = qty * baseRate;
+          items[index].amount = subtotal - (subtotal * disc / 100);
+        } else {
+          const subtotal = qty * rate;
+          items[index].amount = subtotal - (subtotal * disc / 100);
+        }
+        return { ...prev, items };
+      });
+    }
   }
 
   function selectCustomer(custId) {
@@ -375,8 +411,15 @@ export default function EditInvoice() {
         <div className="space-y-6">
           {items.map((item, i) => (
             <div key={i} className="p-5 sm:p-6 rounded-lg" style={{ background: 'var(--item-card-bg)', border: '1px solid var(--item-card-border)' }}>
-              <div className="flex justify-between items-center mb-5">
-                <span className="text-xs font-bold text-gray-400">Item {i + 1}</span>
+              <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-gray-400">Item {i + 1}</span>
+                  <select onChange={e => selectProduct(i, e.target.value)}
+                    className="input-dark text-xs py-1 px-2 w-auto">
+                    <option value="">-- Select product --</option>
+                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-bold" style={{ color: 'var(--success-text)' }}>{'\u20B9'}{(item.amount || 0).toFixed(2)}</span>
                   {items.length > 1 && (

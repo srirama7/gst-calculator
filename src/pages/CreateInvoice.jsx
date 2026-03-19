@@ -18,6 +18,7 @@ export default function CreateInvoice() {
   const navigate = useNavigate();
   const [company, setCompany] = useState({});
   const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const [invoice, setInvoice] = useState({
@@ -36,6 +37,7 @@ export default function CreateInvoice() {
   useEffect(() => {
     loadCompany();
     loadCustomers();
+    loadProducts();
     loadNextInvoiceNo();
   }, []);
 
@@ -51,6 +53,48 @@ export default function CreateInvoice() {
       const snap = await getDocs(collection(db, 'customers'));
       setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) { /* silently fail */ }
+  }
+
+  async function loadProducts() {
+    try {
+      const snap = await getDocs(collection(db, 'products'));
+      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (e) { /* silently fail */ }
+  }
+
+  function selectProduct(index, prodId) {
+    const p = products.find(x => x.id === prodId);
+    if (p) {
+      updateItem(index, 'mfr', p.mfr || '');
+      // Need to update multiple fields at once
+      setInvoice(prev => {
+        const items = [...prev.items];
+        items[index] = {
+          ...items[index],
+          mfr: p.mfr || '',
+          particulars: p.name || '',
+          hsn: p.hsn || '',
+          pack: p.pack || '',
+          mrp: parseFloat(p.mrp) || 0,
+          rate: parseFloat(p.rate) || 0,
+          gstPercent: parseFloat(p.gstPercent) || 18
+        };
+        const qty = parseFloat(items[index].qty) || 0;
+        const rate = parseFloat(items[index].rate) || 0;
+        const disc = parseFloat(items[index].discount) || 0;
+        const gstPercent = parseFloat(items[index].gstPercent) || 0;
+        const gstMode = items[index].gstMode || 'exclude';
+        if (gstMode === 'include') {
+          const baseRate = rate / (1 + gstPercent / 100);
+          const subtotal = qty * baseRate;
+          items[index].amount = subtotal - (subtotal * disc / 100);
+        } else {
+          const subtotal = qty * rate;
+          items[index].amount = subtotal - (subtotal * disc / 100);
+        }
+        return { ...prev, items };
+      });
+    }
   }
 
   async function loadNextInvoiceNo() {
@@ -353,8 +397,15 @@ export default function CreateInvoice() {
         <div className="space-y-6">
           {items.map((item, i) => (
             <div key={i} className="p-5 sm:p-6 rounded-lg" style={{ background: 'var(--item-card-bg)', border: '1px solid var(--item-card-border)' }}>
-              <div className="flex justify-between items-center mb-5">
-                <span className="text-xs font-bold text-gray-400">Item {i + 1}</span>
+              <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-gray-400">Item {i + 1}</span>
+                  <select onChange={e => selectProduct(i, e.target.value)}
+                    className="input-dark text-xs py-1 px-2 w-auto">
+                    <option value="">-- Select product --</option>
+                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-bold" style={{ color: 'var(--success-text)' }}>{'\u20B9'}{(item.amount || 0).toFixed(2)}</span>
                   {items.length > 1 && (

@@ -7,6 +7,7 @@ import ViewInvoice from './pages/ViewInvoice'
 import EditInvoice from './pages/EditInvoice'
 import Settings from './pages/Settings'
 import Customers from './pages/Customers'
+import Products from './pages/Products'
 import CalculatorWidget from './components/CalculatorWidget'
 
 function BottomNav() {
@@ -17,6 +18,7 @@ function BottomNav() {
     { path: '/', label: 'Dashboard', icon: '\u{1F4CA}' },
     { path: '/invoice/new', label: 'New Invoice', icon: '\u{1F4DD}' },
     { path: '/customers', label: 'Customers', icon: '\u{1F465}' },
+    { path: '/products', label: 'Products', icon: '\u{1F4E6}' },
     { path: '/settings', label: 'Settings', icon: '\u{2699}\uFE0F' },
   ];
 
@@ -71,6 +73,7 @@ function App() {
                 <Link to="/" className="nav-link-dark text-sm px-4 py-2">Dashboard</Link>
                 <Link to="/invoice/new" className="nav-link-dark text-sm px-4 py-2">New Invoice</Link>
                 <Link to="/customers" className="nav-link-dark text-sm px-4 py-2">Customers</Link>
+                <Link to="/products" className="nav-link-dark text-sm px-4 py-2">Products</Link>
                 <Link to="/settings" className="nav-link-dark text-sm px-4 py-2">Settings</Link>
                 <button onClick={toggleTheme} className="theme-toggle-btn ml-2" title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
                   {theme === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19'}
@@ -93,6 +96,7 @@ function App() {
             <Route path="/invoice/:id/edit" element={<EditInvoice />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/products" element={<Products />} />
           </Routes>
         </main>
         {/* Bottom nav for mobile */}
