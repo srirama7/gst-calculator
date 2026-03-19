@@ -12,46 +12,54 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState({ ...emptyProduct });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => { loadProducts(); }, []);
 
   async function loadProducts() {
     try {
-      const snap = await getDocs(collection(db, 'products'));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Loading timed out. Check Firebase Firestore.')), 8000));
+      const snap = await Promise.race([getDocs(collection(db, 'products')), timeout]);
       setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
-      toast.error('Failed to load products');
+      toast.error('Failed to load products: ' + e.message);
     }
     setLoading(false);
   }
 
   async function handleAdd(e) {
     e.preventDefault();
-    if (!form.name.trim()) {
-      toast.error('Product name is required');
-      return;
-    }
+    setSaving(true);
     try {
-      await addDoc(collection(db, 'products'), {
-        ...form,
-        mrp: parseFloat(form.mrp) || 0,
-        rate: parseFloat(form.rate) || 0,
-        gstPercent: parseFloat(form.gstPercent) || 18
-      });
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Save timed out. Check Firebase Firestore connection.')), 10000));
+      await Promise.race([
+        addDoc(collection(db, 'products'), {
+          name: form.name || '',
+          mfr: form.mfr || '',
+          hsn: form.hsn || '',
+          pack: form.pack || '',
+          mrp: parseFloat(form.mrp) || 0,
+          rate: parseFloat(form.rate) || 0,
+          gstPercent: parseFloat(form.gstPercent) || 18
+        }),
+        timeout
+      ]);
       toast.success('Product added!');
       setForm({ ...emptyProduct });
       setShowForm(false);
       loadProducts();
     } catch (e) {
-      toast.error('Failed: ' + e.message);
+      toast.error('Failed to save product: ' + e.message);
     }
+    setSaving(false);
   }
 
   async function handleDelete(id) {
     if (!confirm('Delete this product?')) return;
     try {
-      await deleteDoc(doc(db, 'products', id));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Delete timed out.')), 10000));
+      await Promise.race([deleteDoc(doc(db, 'products', id)), timeout]);
       toast.success('Deleted');
       loadProducts();
     } catch (e) {
@@ -120,7 +128,10 @@ export default function Products() {
               </select>
             </div>
           </div>
-          <button type="submit" className="btn-neon btn-success mt-8 py-2.5 px-6">Save Product</button>
+          <button type="submit" disabled={saving}
+            className="btn-neon btn-success mt-8 py-2.5 px-6 disabled:opacity-50">
+            {saving ? 'Saving...' : 'Save Product'}
+          </button>
         </form>
       )}
 
@@ -141,10 +152,10 @@ export default function Products() {
           <tbody>
             {products.map(p => (
               <tr key={p.id}>
-                <td className="font-medium text-white">{p.name}</td>
-                <td>{p.mfr}</td>
-                <td>{p.hsn}</td>
-                <td>{p.pack}</td>
+                <td className="font-medium text-white">{p.name || '-'}</td>
+                <td>{p.mfr || '-'}</td>
+                <td>{p.hsn || '-'}</td>
+                <td>{p.pack || '-'}</td>
                 <td>{'\u20B9'}{(parseFloat(p.mrp) || 0).toFixed(2)}</td>
                 <td>{'\u20B9'}{(parseFloat(p.rate) || 0).toFixed(2)}</td>
                 <td>{p.gstPercent}%</td>

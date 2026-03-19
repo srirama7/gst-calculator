@@ -12,24 +12,28 @@ export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [form, setForm] = useState({ ...emptyCustomer });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => { loadCustomers(); }, []);
 
   async function loadCustomers() {
     try {
-      const snap = await getDocs(collection(db, 'customers'));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Loading timed out. Check Firebase Firestore.')), 8000));
+      const snap = await Promise.race([getDocs(collection(db, 'customers')), timeout]);
       setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
-      toast.error('Failed to load customers');
+      toast.error('Failed to load customers: ' + e.message);
     }
     setLoading(false);
   }
 
   async function handleAdd(e) {
     e.preventDefault();
+    setSaving(true);
     try {
-      await addDoc(collection(db, 'customers'), form);
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Save timed out. Check Firebase Firestore connection.')), 10000));
+      await Promise.race([addDoc(collection(db, 'customers'), form), timeout]);
       toast.success('Customer added!');
       setForm({ ...emptyCustomer });
       setShowForm(false);
@@ -37,12 +41,14 @@ export default function Customers() {
     } catch (e) {
       toast.error('Failed: ' + e.message);
     }
+    setSaving(false);
   }
 
   async function handleDelete(id) {
     if (!confirm('Delete this customer?')) return;
     try {
-      await deleteDoc(doc(db, 'customers', id));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Delete timed out.')), 10000));
+      await Promise.race([deleteDoc(doc(db, 'customers', id)), timeout]);
       toast.success('Deleted');
       loadCustomers();
     } catch (e) {
@@ -77,7 +83,10 @@ export default function Customers() {
               </div>
             ))}
           </div>
-          <button type="submit" className="btn-neon btn-success mt-8 py-2.5 px-6">Save Customer</button>
+          <button type="submit" disabled={saving}
+            className="btn-neon btn-success mt-8 py-2.5 px-6 disabled:opacity-50">
+            {saving ? 'Saving...' : 'Save Customer'}
+          </button>
         </form>
       )}
 
@@ -95,10 +104,10 @@ export default function Customers() {
           <tbody>
             {customers.map(c => (
               <tr key={c.id}>
-                <td className="font-medium text-white">{c.name}</td>
-                <td>{c.city}</td>
-                <td>{c.gstin}</td>
-                <td>{c.phone}</td>
+                <td className="font-medium text-white">{c.name || '-'}</td>
+                <td>{c.city || '-'}</td>
+                <td>{c.gstin || '-'}</td>
+                <td>{c.phone || '-'}</td>
                 <td>
                   <button onClick={() => handleDelete(c.id)} className="text-sm" style={{ color: 'var(--danger-text)' }}>Delete</button>
                 </td>
