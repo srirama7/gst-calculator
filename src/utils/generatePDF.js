@@ -303,7 +303,7 @@ export function generateInvoicePDF(invoice, company) {
 
   // --- RIGHT SIDE SUMMARY ---
   const labelX = summaryDividerX + 2;
-  const summaryLabelX = summaryDividerX + 22;
+  const summaryLabelX = summaryDividerX + 34;
   const valX = pageWidth - margin - 3;
   let sy = bottomSectionStartY + 1;
 
