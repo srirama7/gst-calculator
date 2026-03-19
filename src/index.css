@@ -15,8 +15,8 @@
   --bg-table-head: rgba(255, 255, 255, 0.05);
   --bg-table-row-hover: rgba(0, 255, 204, 0.03);
   --text-primary: #ffffff;
-  --text-secondary: #d0d0d0;
-  --text-muted: #a0a0a0;
+  --text-secondary: #e8e8e8;
+  --text-muted: #c0c0c0;
   --text-placeholder: rgba(255, 255, 255, 0.3);
   --border-color: rgba(255, 255, 255, 0.1);
   --border-hover: rgba(0, 255, 204, 0.3);
@@ -50,8 +50,8 @@
   --bg-table-head: rgba(0, 0, 0, 0.04);
   --bg-table-row-hover: rgba(0, 150, 120, 0.05);
   --text-primary: #1a1a2e;
-  --text-secondary: #333355;
-  --text-muted: #666688;
+  --text-secondary: #222244;
+  --text-muted: #444466;
   --text-placeholder: rgba(0, 0, 0, 0.35);
   --border-color: rgba(0, 0, 0, 0.12);
   --border-hover: rgba(0, 150, 120, 0.4);
@@ -247,7 +247,8 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 10px;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
   transition: all 0.3s ease;
   font-family: inherit;
 }
@@ -291,20 +292,21 @@ select.input-dark option {
 }
 
 .table-dark th {
-  padding: 12px 16px;
+  padding: 14px 16px;
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
 }
 
 .table-dark td {
-  padding: 12px 16px;
-  font-size: 14px;
-  color: var(--text-secondary);
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -319,9 +321,9 @@ select.input-dark option {
 /* Label */
 .label-dark {
   display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
@@ -372,6 +374,7 @@ select.input-dark option {
   color: var(--text-primary);
   text-decoration: none;
   font-size: 14px;
+  font-weight: 600;
   padding: 8px 16px;
   border-radius: 8px;
   transition: all 0.3s ease;
@@ -429,8 +432,8 @@ select.input-dark option {
 }
 
 .bottom-nav-label {
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
