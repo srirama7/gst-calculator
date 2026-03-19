@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { db } from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import { generateInvoicePDF } from '../utils/generatePDF'
@@ -91,6 +91,9 @@ export default function ViewInvoice() {
           <h1 className="text-xl sm:text-2xl font-bold text-gradient mt-2">Invoice #{invoice.invoiceNo}</h1>
         </div>
         <div className="flex flex-wrap gap-4">
+          <Link to={`/invoice/${id}/edit`} className="btn-neon text-xs sm:text-sm py-2.5 px-4 sm:px-6" style={{ background: 'linear-gradient(135deg, #ff8e53, #ffb347)' }}>
+            Edit Invoice
+          </Link>
           <button onClick={handleRegenerate} className="btn-neon btn-glass text-xs sm:text-sm py-2.5 px-4 sm:px-6">
             Refresh Preview
           </button>

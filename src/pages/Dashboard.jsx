@@ -118,6 +118,7 @@ export default function Dashboard() {
                 <td>
                   <div className="flex items-center gap-3">
                     <Link to={`/invoice/${inv.id}`} className="text-sm" style={{ color: '#00ccff' }}>View</Link>
+                    <Link to={`/invoice/${inv.id}/edit`} className="text-sm" style={{ color: '#ff8e53' }}>Edit</Link>
                     <button onClick={() => handleDelete(inv.id)} className="text-sm" style={{ color: 'var(--danger-text)' }}>Delete</button>
                   </div>
                 </td>

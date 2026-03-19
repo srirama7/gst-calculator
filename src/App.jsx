@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import Dashboard from './pages/Dashboard'
 import CreateInvoice from './pages/CreateInvoice'
 import ViewInvoice from './pages/ViewInvoice'
+import EditInvoice from './pages/EditInvoice'
 import Settings from './pages/Settings'
 import Customers from './pages/Customers'
+import CalculatorWidget from './components/CalculatorWidget'
 
 function BottomNav() {
   const location = useLocation();
@@ -88,12 +90,15 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/invoice/new" element={<CreateInvoice />} />
             <Route path="/invoice/:id" element={<ViewInvoice />} />
+            <Route path="/invoice/:id/edit" element={<EditInvoice />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/customers" element={<Customers />} />
           </Routes>
         </main>
         {/* Bottom nav for mobile */}
         <BottomNav />
+        {/* Floating calculator widget */}
+        <CalculatorWidget />
       </div>
     </Router>
   )
