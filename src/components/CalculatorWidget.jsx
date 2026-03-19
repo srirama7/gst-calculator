@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const MODES = ['Scientific', 'GST', 'Tax'];
 
@@ -383,35 +383,58 @@ export default function CalculatorWidget() {
     );
   }
 
+  const panelRef = useRef(null);
+  const fabRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target) &&
+        fabRef.current && !fabRef.current.contains(e.target)
+      ) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [open]);
+
   return (
     <>
-      {/* Floating toggle button */}
+      {/* Floating toggle button - always at bottom right */}
       <button
+        ref={fabRef}
         onClick={() => setOpen(!open)}
         className="fixed z-[60] flex items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95"
         style={{
-          bottom: open ? 'calc(min(85vh, 580px) + 24px)' : '80px',
+          bottom: '80px',
           right: '16px',
           width: '52px',
           height: '52px',
-          background: open ? 'linear-gradient(135deg, #ff6b6b, #ff8e53)' : 'linear-gradient(135deg, #00ffcc, #00ccff)',
+          background: 'linear-gradient(135deg, #00ffcc, #00ccff)',
           color: '#0a0e27',
-          boxShadow: open ? '0 4px 20px rgba(255,107,107,0.4)' : '0 4px 20px rgba(0,255,204,0.4)',
+          boxShadow: '0 4px 20px rgba(0,255,204,0.4)',
           fontSize: '22px',
         }}
       >
-        {open ? '\u2715' : '\u{1F5A9}'}
+        {'\u{1F5A9}'}
       </button>
 
       {/* Calculator panel */}
       {open && (
         <div
+          ref={panelRef}
           className="fixed z-[55] rounded-2xl overflow-hidden shadow-2xl flex flex-col"
           style={{
-            bottom: '16px',
+            bottom: '140px',
             right: '16px',
             width: 'min(340px, calc(100vw - 32px))',
-            maxHeight: 'min(85vh, 580px)',
+            maxHeight: 'min(70vh, 520px)',
             background: 'var(--bg-card)',
             border: '1px solid var(--border-color)',
             backdropFilter: 'blur(20px)',
